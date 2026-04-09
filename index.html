@@ -968,8 +968,8 @@ let bottles = [
 let selectedType = 'rouge';
 let wineQty = 1;
 
-// ⬇️ COLLE TA CLÉ API ICI ENTRE LES GUILLEMETS
-let apiKey = '';
+// ⬇️ COLLE TA CLÉ API ICI ENTRE LES GUILLEMETS (optionnel, sinon saisir dans Config)
+let apiKey = localStorage.getItem('cave_api_key') || '';
 
 // Placement state
 let pendingBottle = null;
@@ -1537,7 +1537,8 @@ function saveApiKey() {
     return;
   }
   apiKey = val;
-  document.getElementById('apiKeyStatus').textContent = '✅ Clé active pour cette session !';
+  localStorage.setItem('cave_api_key', val);
+  document.getElementById('apiKeyStatus').textContent = '✅ Clé active et mémorisée sur cet appareil !';
   document.getElementById('apiKeyStatus').style.color = '#7dce75';
   showToast('🔑 Clé API enregistrée !');
 }
@@ -1551,7 +1552,7 @@ function renderConfig() {
   const keyStatus = document.getElementById('apiKeyStatus');
   if (apiKey) {
     keyInput.value = apiKey;
-    keyStatus.textContent = '✅ Clé active — reconnaissance opérationnelle';
+    keyStatus.textContent = '✅ Clé mémorisée — reconnaissance opérationnelle';
     keyStatus.style.color = '#7dce75';
   } else {
     keyStatus.textContent = '⚠️ Aucune clé — saisir ci-dessus pour activer le scan';
