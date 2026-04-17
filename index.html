@@ -1946,7 +1946,7 @@ function drawCave(caveId) {
   const R   = 15;   // rayon bouteille rangée avant
   const GAP = 3;    // gap horizontal entre bouteilles
   const COL = R * 2 + GAP;
-  const DY  = R * Math.sqrt(3) * 0.95; // espacement Y en quinconce (≈ 1.73R)
+  const DY  = R * Math.sqrt(3);        // espacement Y exact quinconce hexagonal
 
   const bots = bottles.filter(b => b.caveId === caveId);
   const hitZones = [];
@@ -1966,14 +1966,14 @@ function drawCave(caveId) {
     // ─── Rangées de profondeur, arrière → avant ─────────────────
     for (let d = depth - 1; d >= 0; d--) {
       // Profondeur: rangée 0 = devant (plus grande, plus bas), rangée d-1 = derrière (plus petite, plus haut)
-      const scale  = 1 - d * 0.06;
+      const scale  = 1 - d * 0.10; // 10% plus petite par rang de profondeur
       const Rd     = R * scale;
-      const alpha  = 1 - d * 0.18; // légère transparence pour les rangées arrière
+      const alpha  = 1 - d * 0.22; // rangées profondes plus transparentes
       // Position Y: rangées arrière plus hautes (quinconce vertical)
       const rowY   = yBase + sectionH - R - d * DY;
       // Quinconce horizontal: rangées impaires décalées de demi-pas
       const xOff   = (d % 2 === 1) ? COL / 2 : 0;
-      const isCulot = (d % 2 === 1); // alternance bouchon/culot
+      const isCulot = (d % 2 === 0); // rangée paire = culot, impaire = bouchon (tête-bêche)
 
       for (let c = 0; c < cols; c++) {
         const slot = d * cols + c;
@@ -2074,17 +2074,21 @@ function drawCave(caveId) {
 
         } else {
           // Slot vide
+          const supported = isSupported(cl, d, c, caveId);
           ctx.beginPath();
           ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
-          ctx.strokeStyle = canvasMoveMode && canvasMoveSource
-            ? 'rgba(100,200,100,0.45)'   // vert si mode déplacement actif
-            : 'rgba(201,168,76,0.15)';
-          ctx.lineWidth = canvasMoveMode && canvasMoveSource ? 1.5 : 0.8;
+          if (canvasMoveMode && canvasMoveSource) {
+            ctx.strokeStyle = supported ? 'rgba(100,220,100,0.55)' : 'rgba(100,100,100,0.2)';
+            ctx.lineWidth = supported ? 1.5 : 0.6;
+          } else {
+            ctx.strokeStyle = 'rgba(201,168,76,0.15)';
+            ctx.lineWidth = 0.8;
+          }
           ctx.setLineDash([3, 3]);
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.restore();
-          hitZones.push({ cx, cy, r: Rd * 1.1, bot: null, cave, cl, d, c, slot, isEmpty: true });
+          hitZones.push({ cx, cy, r: Rd * 1.1, bot: null, cave, cl, d, c, slot, isEmpty: true, supported });
         }
       }
     }
@@ -2167,6 +2171,44 @@ function render3D(caveId) {
 function initCaveRotation() {}
 function applyCaveRotation() {}
 function endCaveRotation() {}
+
+// ── Validation support quinconce ──────────────────────────
+// En quinconce : bouteille (d, c) repose sur 2 bouteilles de (d-1)
+// d impair (décalé) : repose sur (d-1,c) et (d-1,c+1)
+// d pair   (d>0)   : repose sur (d-1,c-1) et (d-1,c)
+function isSupported(cl, d, c, caveId) {
+  if (d === 0) return true; // rangée avant = toujours supportée (planche)
+  const prev = d - 1;
+  let n1, n2;
+  if (d % 2 === 1) { n1 = c;     n2 = c + 1; } // impair : support droite
+  else             { n1 = c - 1; n2 = c;     } // pair   : support gauche
+  const hasN1 = bottles.some(b => b.caveId===caveId && b.clayetteId===cl.id && b.slot===prev*cl.cols+n1);
+  const hasN2 = bottles.some(b => b.caveId===caveId && b.clayetteId===cl.id && b.slot===prev*cl.cols+n2);
+  return hasN1 || hasN2;
+}
+
+// Vérifie que retirer une bouteille ne fait pas "voler" celles au-dessus
+function wouldOrphan(cl, d, c, caveId) {
+  const next = d + 1;
+  const depth = cl.rows || 1;
+  if (next >= depth) return false;
+  // Les bouteilles supportées par (d,c) dans la rangée suivante
+  let dependents;
+  if (next % 2 === 1) { dependents = [c - 1, c]; }     // next impair : (next,c-1) et (next,c) dépendent de (d,c)
+  else                { dependents = [c,     c + 1]; }  // next pair   : (next,c) et (next,c+1)
+  for (const dc of dependents) {
+    const slot = next * cl.cols + dc;
+    const hasBot = bottles.some(b => b.caveId===caveId && b.clayetteId===cl.id && b.slot===slot);
+    if (!hasBot) continue;
+    // Cette bouteille a-t-elle un autre support que (d,c) ?
+    let otherSupport;
+    if (next % 2 === 1) { otherSupport = dc + 1; }  // l'autre support de (next,dc) est (d, dc+1)
+    else                { otherSupport = dc - 1; }   // l'autre support de (next,dc) est (d, dc-1)
+    const hasOther = bottles.some(b => b.caveId===caveId && b.clayetteId===cl.id && b.slot===d*cl.cols+otherSupport);
+    if (!hasOther) return true; // orpheline si on retire (d,c)
+  }
+  return false;
+}
 
 function handleCanvasClick(cv, cx, cy) {
   const zones = cv._hitZones || [];
