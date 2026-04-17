@@ -101,16 +101,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 10px 4px 12px;
+    gap: 2px;
+    padding: 8px 2px 10px;
     border: none;
     background: none;
     color: var(--text-light);
     font-family: 'DM Sans', sans-serif;
-    font-size: 10px;
+    font-size: 9px;
     cursor: pointer;
     transition: color 0.2s;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
   }
   .nav-btn .icon { font-size: 20px; transition: transform 0.2s; }
   .nav-btn.active { color: var(--gold-light); }
@@ -595,6 +595,322 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ============================================================
+     VUE DE FACE — RACK À VIN
+  ============================================================ */
+
+
+  /* Conteneur du rack */
+  .rack-front-wrapper {
+    overflow-x: auto; padding: 8px 4px 12px;
+    scrollbar-width: none;
+  }
+  .rack-front-wrapper::-webkit-scrollbar { display: none; }
+
+  .rack-front { display: inline-flex; flex-direction: column; gap: 6px; min-width: 100%; }
+
+  /* Ligne d'un rang */
+  .rack-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Contrôles du rang (quinconce + orientation) */
+  .row-controls {
+    display: flex; flex-direction: column; gap: 3px;
+    margin-right: 6px; flex-shrink: 0;
+  }
+  .row-ctrl-btn {
+    width: 24px; height: 20px;
+    border-radius: 4px; border: 1px solid rgba(201,168,76,0.2);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-light); font-size: 9px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; padding: 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .row-ctrl-btn.active { background: rgba(201,168,76,0.25); color: var(--gold-light); border-color: var(--gold); }
+
+  /* Numéro de rang */
+  .rack-row-num {
+    font-size: 10px; color: var(--text-light);
+    width: 16px; text-align: right; flex-shrink: 0;
+  }
+
+  /* Slots (bouteilles) */
+  .rack-slots { display: flex; gap: 5px; align-items: center; }
+  .rack-slots.quinconce { padding-left: 24px; }
+
+  /* Cercle bouteille (vue de face) */
+  .bottle-front {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bottle-front:hover { transform: scale(1.1); filter: brightness(1.2); }
+
+  /* Fond sombre + bague de couleur */
+  .bottle-front.rouge {
+    background: radial-gradient(circle at 35% 35%, #3A0808, #1A0404);
+    box-shadow: 0 0 0 4px #C9453A, 0 0 0 6px rgba(139,26,26,0.25), 0 3px 10px rgba(0,0,0,0.5);
+  }
+  .bottle-front.blanc {
+    background: radial-gradient(circle at 35% 35%, #2A1E08, #1A1205);
+    box-shadow: 0 0 0 4px #D4B483, 0 0 0 6px rgba(212,180,131,0.2), 0 3px 10px rgba(0,0,0,0.5);
+  }
+  .bottle-front.rose {
+    background: radial-gradient(circle at 35% 35%, #2A0810, #1A0408);
+    box-shadow: 0 0 0 4px #D4607A, 0 0 0 6px rgba(212,96,122,0.2), 0 3px 10px rgba(0,0,0,0.5);
+  }
+  .bottle-front.empty {
+    background: rgba(255,255,255,0.03);
+    border: 1.5px dashed rgba(201,168,76,0.15);
+    box-shadow: none; cursor: default;
+  }
+  .bottle-front.empty:hover { transform: none; filter: none; }
+
+  /* Centre : bouchon ou culot */
+  .bottle-front .bottle-center {
+    width: 16px; height: 20px;
+    border-radius: 8px;
+    background: linear-gradient(160deg, #E8D098, #B89040);
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .bottle-front.culot-view .bottle-center {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #2A2010, #0A0805);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.8), 0 0 0 3px rgba(120,90,30,0.4);
+  }
+  .bottle-front.empty .bottle-center { display: none; }
+
+  /* Badge "×2" si 2 bouteilles en profondeur */
+  .depth-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: var(--gold); color: var(--dark);
+    font-size: 9px; font-weight: 700;
+    width: 16px; height: 16px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  /* Séparateur plancher entre rangs */
+  .rack-shelf-line {
+    height: 6px;
+    background: linear-gradient(180deg, #C8A050, #7A5018);
+    border-radius: 3px;
+    margin: 0 22px 0 54px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  }
+
+  /* DRAG & DROP */
+  .bottle-front.dragging   { opacity: 0.2; transform: scale(0.88) !important; filter: none !important; }
+  .bottle-front.drag-over  {
+    box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(201,168,76,0.5) !important;
+    transform: scale(1.15) !important;
+  }
+  .drag-ghost {
+    position: fixed; z-index: 9999; pointer-events: none;
+    opacity: 0.92; transform: scale(1.2) rotate(4deg);
+    transition: none !important;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.7) !important;
+  }
+  .move-mode-btn { transition: all 0.2s; }
+  .move-mode-btn.on { background: var(--rouge) !important; color: #fff !important; border-color: var(--rouge-light) !important; }
+  .rack-front.move-mode .bottle-front:not(.empty) { cursor: grab; }
+
+  /* ── 3D CAVE VIEWPORT ──────────────────────────────────── */
+  .cave-3d-viewport {
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    touch-action: pan-y;
+    padding: 10px 0;
+  }
+  .cave-3d-viewport:active { cursor: grabbing; }
+
+  .cave-3d-scene {
+    perspective: 700px;
+    perspective-origin: 50% 30%;
+  }
+
+  .cave-3d-inner {
+    transform: rotateY(0deg);
+    transform-origin: center center;
+    transition: transform 0.06s ease-out;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+
+  .cave-3d-hint {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-light);
+    padding: 0 0 6px;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .cave-3d-angle-badge {
+    font-size: 10px;
+    color: var(--gold);
+    background: rgba(201,168,76,0.12);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  /* Bouteilles en profondeur — assombries */
+  .bottle-depth-1 { filter: brightness(0.7) saturate(0.75) !important; }
+  .bottle-depth-2 { filter: brightness(0.5) saturate(0.55) !important; }
+
+  /* ── FULL CAVE VIEW ─────────────────────────────────────── */
+  .cave-full-view {
+    padding: 6px 4px;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: none;
+  }
+  .cave-full-view::-webkit-scrollbar { display: none; }
+
+  /* Séparateur clayette (barre bois draggable) */
+  .shelf-sep {
+    height: 14px;
+    background: linear-gradient(180deg, #D4A850 0%, #8B5E20 55%, #5A3A0A 100%);
+    border-radius: 4px;
+    margin: 2px 0;
+    cursor: row-resize;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);
+    user-select: none; touch-action: none; flex-shrink: 0;
+    transition: filter 0.15s;
+  }
+  .shelf-sep:hover { filter: brightness(1.2); }
+  .shelf-sep.sep-dragging { filter: brightness(1.35); box-shadow: 0 6px 18px rgba(0,0,0,0.6), 0 0 0 2px var(--gold); }
+  .shelf-sep-dots { color: rgba(255,210,80,0.35); font-size: 16px; letter-spacing: 4px; }
+  .shelf-sep-label {
+    position: absolute; right: 6px;
+    font-size: 9px; color: rgba(255,200,80,0.5); font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Mur haut et bas de la cave */
+  .cave-wall {
+    height: 10px;
+    background: linear-gradient(180deg, #3D2E18, #2A1F10);
+    border-radius: 4px;
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+
+  /* Section entre deux clayettes */
+  .cave-section-full {
+    position: relative;
+    overflow: visible;
+    min-height: 52px;
+    display: flex;
+    align-items: flex-end;
+    padding: 6px 0 6px 34px;
+    gap: 0;
+  }
+  .section-col-label {
+    position: absolute; left: 0;
+    font-size: 9px; color: var(--text-light);
+    bottom: 10px; width: 32px; text-align: right; padding-right: 4px;
+  }
+  .section-depth-ctrl {
+    position: absolute; left: 0; top: 4px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .sdepth-btn {
+    width: 14px; height: 14px; border-radius: 3px;
+    border: 1px solid rgba(201,168,76,0.2);
+    background: rgba(255,255,255,0.04); color: var(--gold);
+    font-size: 10px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .sdepth-btn:hover { background: rgba(201,168,76,0.15); }
+  .sdepth-val { font-size: 9px; color: var(--gold-light); text-align: center; }
+
+  /* Colonnes de bouteilles (empilées en quinconce) */
+  .section-columns { display: flex; gap: 5px; align-items: flex-end; }
+  .bottle-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; position: relative; }
+  /* bouteille 2ème couche décalée sur la droite et vers le bas */
+  .bottle-col .bottle-front:not(:first-child) {
+    margin-top: -8px;
+  }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .accord-result-card {
+    background: var(--dark2);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    animation: slideIn 0.3s ease;
+  }
+  .accord-result-card.top { border-color: var(--gold); background: linear-gradient(135deg, rgba(201,168,76,0.08), var(--dark2)); }
+  .accord-rank { font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom:4px; }
+  .accord-wine-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; color: var(--cream); }
+  .accord-meta { font-size: 12px; color: var(--text-light); margin: 3px 0 8px; }
+  .accord-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .accord-tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500;
+    background: rgba(255,255,255,0.06); color: var(--cream);
+  }
+  .accord-tag.price { background: rgba(45,90,39,0.3); color: #7dce75; }
+  .accord-tag.temp  { background: rgba(201,168,76,0.15); color: var(--gold-light); }
+  .accord-tag.score { background: rgba(201,168,76,0.25); color: var(--gold); }
+  .accord-why { font-size: 12px; color: var(--text-light); line-height: 1.5; font-style: italic; }
+  .accord-location { font-size: 11px; color: var(--gold-light); margin-top: 8px; display:flex; align-items:center; gap:5px; }
+
+  /* ── STATS TAB ─────────────────────────────────────────── */
+  .stat-hero {
+    background: linear-gradient(135deg, rgba(139,26,26,0.2), rgba(201,168,76,0.1));
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .stat-hero-item { flex: 1; min-width: 80px; text-align: center; }
+  .stat-hero-val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; color: var(--gold-light); line-height: 1;
+  }
+  .stat-hero-lbl { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+
+  .stat-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .stat-bar-label { font-size: 12px; color: var(--cream); min-width: 80px; }
+  .stat-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .stat-bar-val { font-size: 11px; color: var(--text-light); min-width: 32px; text-align: right; }
+
+  .wine-list-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid rgba(201,168,76,0.08);
+  }
+  .wine-list-item:last-child { border-bottom: none; }
+  .wine-list-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .wine-list-name { flex: 1; font-size: 13px; color: var(--cream); }
+  .wine-list-year { font-size: 11px; color: var(--text-light); }
+  .wine-list-price { font-size: 13px; color: var(--gold-light); font-weight: 500; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .stat-mini {
+    background: var(--dark2); border: 1px solid rgba(201,168,76,0.1);
+    border-radius: var(--radius-sm); padding: 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat-mini-val { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--cream); }
+  .stat-mini-lbl { font-size: 10px; color: var(--text-light); }
+
   /* DIVIDER */
   .divider { height: 1px; background: rgba(201,168,76,0.1); margin: 12px 0; }
 
@@ -692,6 +1008,9 @@
         </div>
       </div>
 
+      <label class="label">Prix de la bouteille (€)</label>
+      <input type="number" id="winePrice" placeholder="Ex: 25" style="margin-bottom:12px;">
+
       <label class="label">Nombre de bouteilles</label>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="stepper">
@@ -711,25 +1030,23 @@
   <div class="tab-panel" id="tab-plan">
     <div class="section-header">
       Plan de la cave
-      <button class="btn btn-secondary btn-sm" onclick="switchTab('config')">⚙️ Configurer</button>
+      <button class="btn btn-secondary btn-sm" id="moveModeBtn" onclick="toggleCanvasMoveMode()">↔ Déplacer</button>
+    </div>
+
+    <!-- Bannière retour accords (visible uniquement si highlight actif) -->
+    <div id="highlightBanner" style="display:none;" class="info-banner" style="background:rgba(201,168,76,0.15);border-color:var(--gold);margin-bottom:10px;">
+      <span>📍 Bouteille mise en évidence</span>
+      <button onclick="clearHighlight()" class="btn btn-secondary btn-sm" style="margin-left:auto;padding:4px 10px;">← Retour aux accords</button>
     </div>
 
     <div class="cave-tabs" id="planCaveTabs"></div>
-    <div class="clayette-label">Clayette :</div>
-    <div class="clayette-tabs" id="planClayetteTabs"></div>
 
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(139,26,26,0.7)"></div>Rouge</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(212,180,131,0.7)"></div>Blanc</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(212,96,122,0.7)"></div>Rosé</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.08);border:1px solid rgba(201,168,76,0.2)"></div>Libre</div>
+    <!-- Vue cave frontale -->
+    <div class="card" style="padding:8px 10px 10px;">
+      <canvas id="caveCanvas" style="width:100%;display:block;" height="320"></canvas>
     </div>
 
-    <div class="card" style="padding:12px;">
-      <div class="cave-grid" id="planGrid"></div>
-    </div>
-
-    <div style="text-align:center;font-size:12px;color:var(--text-light);margin-top:4px;" id="planStats"></div>
+    <div style="text-align:center;font-size:12px;color:var(--text-light);margin-top:8px;" id="planStats"></div>
   </div>
 
   <!-- ===== ONGLET PLACEMENT (modal-like) ===== -->
@@ -744,21 +1061,20 @@
     </div>
 
     <div class="cave-tabs" id="placementCaveTabs"></div>
-    <div class="clayette-label">Clayette :</div>
-    <div class="clayette-tabs" id="placementClayetteTabs"></div>
 
-    <div class="legend">
+    <div class="legend" style="margin-bottom:8px;">
       <div class="legend-item"><div class="legend-dot" style="background:rgba(139,26,26,0.7)"></div>Rouge</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(212,180,131,0.7)"></div>Blanc</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(212,96,122,0.7)"></div>Rosé</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(201,168,76,0.4);border:1px solid var(--gold)"></div>Sélectionné</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.03);border:1.5px dashed rgba(201,168,76,0.3)"></div>Libre</div>
     </div>
 
-    <div class="card" style="padding:12px;">
-      <div class="cave-grid" id="placementGrid"></div>
+    <div class="card" style="padding:10px;overflow:hidden;">
+      <div id="placement3d"></div>
     </div>
 
-    <button class="btn btn-primary" id="confirmPlacementBtn" onclick="confirmPlacement()" disabled style="opacity:0.5;">
+    <button class="btn btn-primary" id="confirmPlacementBtn" onclick="confirmPlacement()" disabled style="opacity:0.5;margin-top:10px;">
       ✅ Confirmer le rangement
     </button>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="switchTab('add')">← Retour</button>
@@ -769,37 +1085,52 @@
     <div class="section-header">Accords Mets & Vins</div>
 
     <div class="card">
-      <div class="card-title">🍽️ Quel plat ce soir ?</div>
-      <div class="plat-grid">
-        <div class="plat-btn" onclick="getAccord('viandes-rouges',this)"><span class="emoji">🥩</span>Viandes rouges</div>
-        <div class="plat-btn" onclick="getAccord('volaille',this)"><span class="emoji">🍗</span>Volaille</div>
-        <div class="plat-btn" onclick="getAccord('poisson',this)"><span class="emoji">🐟</span>Poisson</div>
-        <div class="plat-btn" onclick="getAccord('fruits-mer',this)"><span class="emoji">🦞</span>Fruits de mer</div>
-        <div class="plat-btn" onclick="getAccord('fromage',this)"><span class="emoji">🧀</span>Fromage</div>
-        <div class="plat-btn" onclick="getAccord('dessert',this)"><span class="emoji">🍰</span>Dessert</div>
-        <div class="plat-btn" onclick="getAccord('aperitif',this)"><span class="emoji">🫒</span>Apéritif</div>
-        <div class="plat-btn" onclick="getAccord('charcuterie',this)"><span class="emoji">🥓</span>Charcuterie</div>
-        <div class="plat-btn" onclick="getAccord('barbecue',this)"><span class="emoji">🔥</span>Barbecue</div>
-        <div class="plat-btn" onclick="getAccord('gibier',this)"><span class="emoji">🦌</span>Gibier</div>
-        <div class="plat-btn" onclick="getAccord('pates-risotto',this)"><span class="emoji">🍝</span>Pâtes / Risotto</div>
-        <div class="plat-btn" onclick="getAccord('vegetarien',this)"><span class="emoji">🥗</span>Végétarien</div>
-        <div class="plat-btn" onclick="getAccord('fondue-raclette',this)"><span class="emoji">🫕</span>Fondue / Raclette</div>
-        <div class="plat-btn" onclick="getAccord('epice',this)"><span class="emoji">🌶️</span>Plat épicé</div>
-        <div class="plat-btn" onclick="getAccord('sushi',this)"><span class="emoji">🍣</span>Sushi / Asiatique</div>
+      <div class="card-title">🍽️ Décris ton repas</div>
+      <textarea id="accordRepas" placeholder="Ex : Magret de canard aux cerises avec une purée de céleri rave, dîner en famille ce soir…" style="height:90px;resize:none;margin-bottom:10px;"></textarea>
+
+      <div class="row" style="margin-bottom:12px;gap:8px;">
+        <div style="flex:1;">
+          <label class="label">Budget max (€)</label>
+          <input type="number" id="accordBudget" placeholder="Pas de limite" style="margin-bottom:0;">
+        </div>
+        <div style="flex:1;">
+          <label class="label">Nombre de suggestions</label>
+          <select id="accordCount" style="margin-bottom:0;">
+            <option value="2">2 vins</option>
+            <option value="3" selected>3 vins</option>
+            <option value="5">5 vins</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="getAccordIA()">
+        ✨ Trouver les meilleurs accords
+      </button>
+    </div>
+
+    <!-- Raccourcis rapides -->
+    <div class="card" style="padding:12px 14px;">
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Raccourcis</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Viandes rouges grillées')">🥩 Viandes rouges</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Poisson en sauce')">🐟 Poisson</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Fruits de mer et huîtres')">🦞 Fruits de mer</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Plateau de fromages')">🧀 Fromages</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Apéritif dînatoire')">🫒 Apéritif</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Barbecue estival')">🔥 Barbecue</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Sushis et cuisine japonaise')">🍣 Sushis</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRepas('Volaille à la crème')">🍗 Volaille</button>
       </div>
     </div>
 
-    <div class="reco-card" id="recoCard">
-      <div style="font-size:11px;color:var(--green);margin-bottom:6px;">✓ Meilleure recommandation dans ta cave</div>
-      <div class="reco-wine-name" id="recoName"></div>
-      <div class="reco-meta" id="recoMeta"></div>
-      <div class="reco-location" id="recoLocation"></div>
-      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
-        <div class="reco-location" id="recoTemp" style="flex:1;min-width:120px;"></div>
-        <div class="reco-location" id="recoAlt" style="flex:2;min-width:160px;font-size:11px;"></div>
-      </div>
-      <div class="reco-note" id="recoNote"></div>
+    <!-- Zone de chargement -->
+    <div id="accordLoading" style="display:none;text-align:center;padding:20px;">
+      <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block;">🍷</div>
+      <div style="font-size:13px;color:var(--text-light);margin-top:8px;">Analyse de ta cave en cours…</div>
     </div>
+
+    <!-- Résultats -->
+    <div id="accordResults"></div>
   </div>
 
   <!-- ===== ONGLET AGENDA ===== -->
@@ -874,6 +1205,12 @@
     </div>
   </div>
 
+  <!-- ===== ONGLET STATS ===== -->
+  <div class="tab-panel" id="tab-stats">
+    <div class="section-header">Synthèse de la Cave</div>
+    <div id="statsContent"></div>
+  </div>
+
   <!-- ===== ONGLET CONFIG ===== -->
   <div class="tab-panel" id="tab-config">
     <div class="section-header">
@@ -912,6 +1249,9 @@
   <button class="nav-btn" onclick="switchTab('agenda')" id="nav-agenda">
     <span class="icon">📅</span>Agenda
   </button>
+  <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats">
+    <span class="icon">📊</span>Synthèse
+  </button>
   <button class="nav-btn" onclick="switchTab('config')" id="nav-config">
     <span class="icon">⚙️</span>Config
   </button>
@@ -928,7 +1268,8 @@
   <div class="sheet-meta" id="sheetMeta"></div>
   <div class="sheet-location" id="sheetLocation"></div>
   <div class="sheet-divider"></div>
-  <button class="btn btn-danger" onclick="removeBottle()" style="margin-bottom:10px;">🗑️ Retirer cette bouteille</button>
+  <button class="btn btn-danger" id="removeBottleBtn" onclick="removeBottle()" style="margin-bottom:8px;">🗑️ Retirer cette bouteille</button>
+  <button class="btn btn-danger" id="removeBothBtn" onclick="removeBothBottles()" style="margin-bottom:10px;display:none;opacity:0.7;">🗑️ Retirer les 2 bouteilles</button>
   <button class="btn btn-secondary" onclick="closeBottomSheet()">Fermer</button>
 </div>
 
@@ -954,14 +1295,14 @@ let caves = [
 
 // Simulated bottles: {caveId, clayetteId, slot, type, name, year}
 let bottles = [
-  {caveId:1,clayetteId:1,slot:0,type:'rouge',name:'Château Margaux 2018',year:2018},
-  {caveId:1,clayetteId:1,slot:1,type:'rouge',name:'Pomerol 2019',year:2019},
-  {caveId:1,clayetteId:1,slot:7,type:'rouge',name:'Gevrey-Chambertin 2016',year:2016},
-  {caveId:1,clayetteId:1,slot:9,type:'rouge',name:'Saint-Émilion 2018',year:2018},
-  {caveId:1,clayetteId:2,slot:2,type:'blanc',name:'Chablis 1er Cru 2019',year:2019},
-  {caveId:1,clayetteId:2,slot:4,type:'blanc',name:'Pouilly-Fumé 2022',year:2022},
-  {caveId:2,clayetteId:1,slot:1,type:'rose',name:'Bandol Rosé 2023',year:2023},
-  {caveId:2,clayetteId:1,slot:3,type:'rose',name:'Côtes de Provence 2024',year:2024},
+  {caveId:1,clayetteId:1,slot:0,type:'rouge',name:'Château Margaux 2018',year:2018,region:'Bordeaux',price:350,apogeeStart:2028,apogeeEnd:2038},
+  {caveId:1,clayetteId:1,slot:1,type:'rouge',name:'Pomerol 2019',year:2019,region:'Bordeaux',price:85,apogeeStart:2025,apogeeEnd:2032},
+  {caveId:1,clayetteId:1,slot:7,type:'rouge',name:'Gevrey-Chambertin 2016',year:2016,region:'Bourgogne',price:65,apogeeStart:2023,apogeeEnd:2028},
+  {caveId:1,clayetteId:1,slot:9,type:'rouge',name:'Saint-Émilion 2018',year:2018,region:'Bordeaux',price:45,apogeeStart:2026,apogeeEnd:2034},
+  {caveId:1,clayetteId:2,slot:2,type:'blanc',name:'Chablis 1er Cru 2019',year:2019,region:'Bourgogne',price:28,apogeeStart:2022,apogeeEnd:2027},
+  {caveId:1,clayetteId:2,slot:4,type:'blanc',name:'Pouilly-Fumé 2022',year:2022,region:'Loire',price:22,apogeeStart:2024,apogeeEnd:2028},
+  {caveId:2,clayetteId:1,slot:1,type:'rose',name:'Bandol Rosé 2023',year:2023,region:'Provence',price:18,apogeeStart:2024,apogeeEnd:2026},
+  {caveId:2,clayetteId:1,slot:3,type:'rose',name:'Côtes de Provence 2024',year:2024,region:'Provence',price:12,apogeeStart:2025,apogeeEnd:2026},
 ];
 
 // State
@@ -970,6 +1311,18 @@ let wineQty = 1;
 
 // ⬇️ COLLE TA CLÉ API ICI ENTRE LES GUILLEMETS (optionnel, sinon saisir dans Config)
 let apiKey = localStorage.getItem('cave_api_key') || '';
+
+// ── Drag & drop — déclarés tôt pour être accessibles partout ──
+let dragState = null;
+let didDrag = false;
+let pendingMouseDrag = null;
+
+function makeTapHandler(bottle, cave, clayette, pos, backBottle) {
+  return function() {
+    if (didDrag) return;
+    openBottomSheet(bottle, cave, clayette, pos, backBottle);
+  };
+}
 
 // Placement state
 let pendingBottle = null;
@@ -996,6 +1349,7 @@ function switchTab(name) {
   if (name === 'plan') renderPlanTab();
   if (name === 'config') renderConfig();
   if (name === 'placement') renderPlacementTab();
+  if (name === 'stats') renderStats();
 }
 
 // ============================================================
@@ -1070,7 +1424,7 @@ function onPhotoTaken(input) {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: 'Analyse cette étiquette de vin. Réponds UNIQUEMENT en JSON valide sans backticks ni texte autour :\n{"nom":"...","millesime":2020,"type":"rouge","region":"...","domaine":"...","apogee_debut":2024,"apogee_fin":2030,"description":"...","confiance":90}\nSi une info manque mets null. millesime et apogees sont des entiers.' }
+            { type: 'text', text: 'Analyse cette étiquette de bouteille de vin. Réponds UNIQUEMENT en JSON valide, sans backticks ni texte autour.\n\nUtilise EXACTEMENT ces noms de clés (avec underscores, pas d\'espaces) :\n{"nom":"nom complet","millesime":2020,"type":"rouge","region":"région","domaine":"domaine","apogee_debut":2026,"apogee_fin":2032,"prix":25,"description":"courte description","confiance":90}\n\nRègles IMPORTANTES :\n- Les clés doivent contenir des underscores _ et non des espaces : "apogee_debut" et non "apogee debut"\n- millesime, apogee_debut, apogee_fin, prix sont des ENTIERS (jamais de guillemets, jamais null sauf si vraiment impossible)\n- Pour apogee_debut/apogee_fin : estime TOUJOURS une fenêtre selon type+appellation+millésime. Ex: Saint-Joseph rouge 2020 → apogee_debut:2025, apogee_fin:2033. Beaujolais 2023 → apogee_debut:2024, apogee_fin:2026. NE MET PAS null si tu peux estimer.\n- Si le millésime est visible sur l\'étiquette, lis-le attentivement\n- type = exactement "rouge", "blanc" ou "rose"\n- confiance = entier 0-100' }
           ]
         }]
       })
@@ -1084,16 +1438,31 @@ function onPhotoTaken(input) {
     })
     .then(function(data) {
       setStatus('✅ Étape 3/3 — Traitement de la réponse…', 'info');
-      const text = (data.content || []).find(function(b) { return b.type === 'text'; });
-      if (!text) throw new Error('Aucun texte dans la réponse');
-      const clean = text.text.replace(/```json|```/g, '').trim();
-      const wine = JSON.parse(clean);
+      const textBlock = (data.content || []).find(function(b) { return b.type === 'text'; });
+      if (!textBlock) throw new Error('Aucun texte dans la réponse API');
 
-      document.getElementById('wineName').value = wine.nom || '';
-      document.getElementById('wineYear').value = wine.millesime || '';
-      document.getElementById('wineRegion').value = wine.region || '';
-      if (wine.apogee_debut) document.getElementById('apogeeStart').value = wine.apogee_debut;
-      if (wine.apogee_fin) document.getElementById('apogeeEnd').value = wine.apogee_fin;
+      const raw = textBlock.text;
+      console.log('Réponse brute Claude:', raw);
+
+      // Extraction robuste du JSON (cherche le premier { ... })
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Pas de JSON dans la réponse : ' + raw.substring(0, 200));
+
+      const wine = JSON.parse(jsonMatch[0]);
+      console.log('Vin parsé:', wine);
+
+      // Remplir les champs — accepte plusieurs variantes de noms de clés
+      document.getElementById('wineName').value = wine.nom || wine.name || '';
+      document.getElementById('wineYear').value = wine.millesime || wine.millésime || wine.vintage || '';
+      document.getElementById('wineRegion').value = wine.region || wine.région || wine.appellation || '';
+      if (wine.prix != null) document.getElementById('winePrice').value = wine.prix;
+
+      // Apogée — accepte plusieurs variantes (avec underscore, espace, accent)
+      const debut = wine.apogee_debut ?? wine['apogee debut'] ?? wine.apogée_debut ?? wine['apogée debut'] ?? wine.debut_apogee ?? wine.peak_start ?? null;
+      const fin   = wine.apogee_fin   ?? wine['apogee fin']   ?? wine.apogée_fin   ?? wine['apogée fin']   ?? wine.fin_apogee   ?? wine.peak_end   ?? null;
+      console.log('Apogée détectée:', debut, '→', fin);
+      document.getElementById('apogeeStart').value = debut != null ? debut : '';
+      document.getElementById('apogeeEnd').value   = fin   != null ? fin   : '';
 
       const t = wine.type || 'rouge';
       document.querySelectorAll('.type-btn').forEach(function(b) { b.classList.remove('selected'); });
@@ -1103,7 +1472,10 @@ function onPhotoTaken(input) {
       const typeLabel = {rouge:'Rouge', blanc:'Blanc', rose:'Rosé'}[t] || t;
       document.getElementById('scannedName').textContent = wine.nom || 'Vin inconnu';
       document.getElementById('scannedMeta').textContent = [wine.domaine, wine.region, typeLabel].filter(Boolean).join(' · ');
-      document.getElementById('scannedNote').textContent = wine.description || (wine.apogee_debut && wine.apogee_fin ? 'Apogée : ' + wine.apogee_debut + '–' + wine.apogee_fin : '');
+      const apogeeStr = (wine.apogee_debut && wine.apogee_fin) ? `Apogée : ${wine.apogee_debut}–${wine.apogee_fin}` : '';
+      const prixStr = wine.prix != null ? `~${wine.prix}€` : '';
+      const parts = [wine.description, apogeeStr, prixStr].filter(Boolean);
+      document.getElementById('scannedNote').textContent = parts.join(' · ');
       document.querySelector('#scannedWine .confidence').textContent = '✓ ' + (wine.confiance || 0) + '% confiance';
       document.getElementById('scannedWine').classList.add('show');
 
@@ -1179,6 +1551,9 @@ function goToPlacement() {
     type: selectedType,
     region: document.getElementById('wineRegion').value,
     qty: wineQty,
+    price: parseFloat(document.getElementById('winePrice').value) || null,
+    apogeeStart: parseInt(document.getElementById('apogeeStart').value) || null,
+    apogeeEnd: parseInt(document.getElementById('apogeeEnd').value) || null,
   };
   selectedSlots = [];
 
@@ -1202,18 +1577,140 @@ function goToPlacement() {
 function renderPlacementTab() {
   renderCaveTabs('placementCaveTabs', placementActiveCave, (id) => {
     placementActiveCave = id;
-    const cave = caves.find(c=>c.id===id);
-    placementActiveClayette = cave.clayettes[0].id;
     renderPlacementTab();
   });
-
-  renderClayetteTabs('placementClayetteTabs', placementActiveCave, placementActiveClayette, (id) => {
-    placementActiveClayette = id;
-    renderPlacementTab();
-  });
-
-  renderGrid('placementGrid', placementActiveCave, placementActiveClayette, true);
+  render3DPlacement(placementActiveCave);
   updateConfirmBtn();
+}
+
+function render3DPlacement(caveId) {
+  const cave = caves.find(c => c.id === caveId);
+  if (!cave) return;
+
+  const container = document.getElementById('placement3d');
+  container.innerHTML = '';
+  container.className = 'cave-full-view';
+
+  const BD = 36;
+  const GAP = 4;
+
+  const topWall = document.createElement('div');
+  topWall.className = 'cave-wall';
+  container.appendChild(topWall);
+
+  cave.clayettes.forEach((cl) => {
+    const depth = cl.rows || 1;
+    const bottlesHere = bottles.filter(b => b.caveId === caveId && b.clayetteId === cl.id);
+
+    // Section
+    const section = document.createElement('div');
+    section.style.cssText = 'position:relative;display:flex;align-items:center;padding:4px 0 4px 34px;';
+
+    // Label
+    const lbl = document.createElement('div');
+    lbl.className = 'section-col-label';
+    lbl.textContent = cl.name;
+    section.appendChild(lbl);
+
+    // Rangées en quinconce
+    const rowsWrap = document.createElement('div');
+    rowsWrap.style.cssText = 'display:flex;flex-direction:column-reverse;gap:0;padding:6px 0 4px;';
+
+    for (let d = 0; d < depth; d++) {
+      const isOffset = d % 2 === 1;
+      const rowEl = document.createElement('div');
+      rowEl.style.cssText = `display:flex;gap:${GAP}px;align-items:center;
+        padding-left:${isOffset ? (BD + GAP) / 2 : 0}px;
+        margin-bottom:${d < depth - 1 ? -(BD * 0.22) : 0}px;
+        `;
+
+      for (let c = 0; c < cl.cols; c++) {
+        const slotIndex = d * cl.cols + c;
+        const existingBottles = bottlesHere.filter(b => b.slot === slotIndex);
+        const frontBottle = existingBottles.find(b => b.depth !== 'back' && b.depth !== 'back2' && b.depth !== 'back3');
+        const isSelected = selectedSlots.some(s => s.caveId===caveId && s.clayetteId===cl.id && s.slot===slotIndex);
+        const isFull = existingBottles.length >= depth; // max profondeur atteinte
+
+        const circleEl = document.createElement('div');
+        circleEl.style.cssText = `width:${BD}px;height:${BD}px;border-radius:50%;
+          position:relative;flex-shrink:0;transition:transform 0.15s,filter 0.15s;`;
+
+        if (isSelected) {
+          // Emplacement sélectionné — couleur du vin en cours
+          const typeColors = { rouge:'#C9453A', blanc:'#D4B483', rose:'#D4607A' };
+          const pendingType = pendingBottle?.type || 'rouge';
+          circleEl.style.background = `radial-gradient(circle at 35% 35%, #3A0808, #1A0404)`;
+          circleEl.style.boxShadow = `0 0 0 3px var(--gold), 0 0 14px rgba(201,168,76,0.5)`;
+          circleEl.style.cursor = 'pointer';
+          circleEl.style.animation = 'pulse 0.8s infinite alternate';
+          const cork = document.createElement('div');
+          cork.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:12px;height:16px;border-radius:6px;
+            background:var(--gold);pointer-events:none;`;
+          circleEl.appendChild(cork);
+          circleEl.title = 'Cliquer pour désélectionner';
+          circleEl.onclick = () => { deselectSlot(caveId, cl.id, slotIndex); };
+
+        } else if (frontBottle && !isFull) {
+          // Occupé mais peut recevoir une 2ème bouteille en profondeur
+          const colors = { rouge:'radial-gradient(circle at 35% 35%, #3A0808, #1A0404)', blanc:'radial-gradient(circle at 35% 35%, #2A1E08, #1A1205)', rose:'radial-gradient(circle at 35% 35%, #2A0810, #1A0408)' };
+          const rings = { rouge:'#C9453A', blanc:'#D4B483', rose:'#D4607A' };
+          circleEl.style.background = colors[frontBottle.type] || colors.rouge;
+          circleEl.style.boxShadow = `0 0 0 3px ${rings[frontBottle.type]||'#888'}, 0 3px 8px rgba(0,0,0,0.5)`;
+          circleEl.style.cursor = 'pointer';
+          circleEl.style.opacity = '0.6';
+          const cork = document.createElement('div');
+          cork.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:16px;border-radius:6px;background:linear-gradient(160deg,#E8D098,#B89040);pointer-events:none;`;
+          circleEl.appendChild(cork);
+          circleEl.title = `${frontBottle.name} — cliquer pour mettre en 2ème position`;
+          circleEl.onclick = () => { selectSlot(caveId, cl.id, slotIndex); };
+
+        } else if (frontBottle && isFull) {
+          // Occupé et plein
+          const colors = { rouge:'radial-gradient(circle at 35% 35%, #3A0808, #1A0404)', blanc:'radial-gradient(circle at 35% 35%, #2A1E08, #1A1205)', rose:'radial-gradient(circle at 35% 35%, #2A0810, #1A0408)' };
+          const rings = { rouge:'#C9453A', blanc:'#D4B483', rose:'#D4607A' };
+          circleEl.style.background = colors[frontBottle.type] || colors.rouge;
+          circleEl.style.boxShadow = `0 0 0 3px ${rings[frontBottle.type]||'#888'}, 0 3px 8px rgba(0,0,0,0.5)`;
+          circleEl.style.cursor = 'default';
+          const cork = document.createElement('div');
+          cork.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:16px;border-radius:6px;background:linear-gradient(160deg,#E8D098,#B89040);pointer-events:none;`;
+          circleEl.appendChild(cork);
+          circleEl.title = 'Emplacement complet';
+
+        } else {
+          // Libre → sélectionnable
+          circleEl.style.background = 'rgba(255,255,255,0.03)';
+          circleEl.style.border = '1.5px dashed rgba(201,168,76,0.3)';
+          circleEl.style.cursor = 'pointer';
+          circleEl.title = 'Cliquer pour placer ici';
+          circleEl.onmouseenter = () => { circleEl.style.borderColor = 'var(--gold)'; circleEl.style.background = 'rgba(201,168,76,0.1)'; };
+          circleEl.onmouseleave = () => { circleEl.style.borderColor = 'rgba(201,168,76,0.3)'; circleEl.style.background = 'rgba(255,255,255,0.03)'; };
+          circleEl.onclick = () => { selectSlot(caveId, cl.id, slotIndex); };
+        }
+
+        rowEl.appendChild(circleEl);
+      }
+      rowsWrap.appendChild(rowEl);
+    }
+
+    section.appendChild(rowsWrap);
+    container.appendChild(section);
+
+    // Séparateur clayette
+    const sep = document.createElement('div');
+    sep.className = 'shelf-sep';
+    sep.innerHTML = '<span class="shelf-sep-dots">⠿ ⠿ ⠿</span>';
+    sep.style.position = 'relative';
+    const lbl2 = document.createElement('span');
+    lbl2.className = 'shelf-sep-label';
+    lbl2.textContent = cl.name;
+    sep.appendChild(lbl2);
+    container.appendChild(sep);
+  });
+
+  const botWall = document.createElement('div');
+  botWall.className = 'cave-wall';
+  container.appendChild(botWall);
 }
 
 function updateConfirmBtn() {
@@ -1232,13 +1729,16 @@ function confirmPlacement() {
   if (!pendingBottle || selectedSlots.length < pendingBottle.qty) return;
 
   selectedSlots.forEach(s => {
+    const existing = bottles.filter(b => b.caveId===s.caveId && b.clayetteId===s.clayetteId && b.slot===s.slot);
+    const depths = ['front', 'back', 'back2', 'back3'];
+    const usedDepths = existing.map(b => b.depth || 'front');
+    const nextDepth = depths.find(d => !usedDepths.includes(d)) || 'front';
     bottles.push({
-      caveId: s.caveId,
-      clayetteId: s.clayetteId,
-      slot: s.slot,
-      type: pendingBottle.type,
-      name: pendingBottle.name,
-      year: pendingBottle.year,
+      caveId: s.caveId, clayetteId: s.clayetteId, slot: s.slot,
+      type: pendingBottle.type, name: pendingBottle.name, year: pendingBottle.year,
+      region: pendingBottle.region, price: pendingBottle.price,
+      apogeeStart: pendingBottle.apogeeStart, apogeeEnd: pendingBottle.apogeeEnd,
+      depth: nextDepth,
     });
   });
 
@@ -1251,6 +1751,7 @@ function confirmPlacement() {
   document.getElementById('wineYear').value = '';
   document.getElementById('wineRegion').value = '';
   document.getElementById('apogeeStart').value = '';
+  document.getElementById('winePrice').value = '';
   document.getElementById('apogeeEnd').value = '';
   document.getElementById('scannedWine').classList.remove('show');
   wineQty = 1;
@@ -1288,13 +1789,21 @@ function renderGrid(containerId, caveId, clayetteId, isPlacement) {
       const dotColor = {rouge:'#C9453A',blanc:'#D4B483',rose:'#F0A0B5'}[bottle.type] || '#888';
       dot.style.background = dotColor;
       div.appendChild(dot);
-      div.title = bottle.name;
+      // Vérifier si slot arrière libre
+      const backExists = bottles.find(b => b.caveId===caveId && b.clayetteId===clayetteId && b.slot===i && b.depth==='back');
       if (!isPlacement) {
         const row = Math.floor(i / clayette.cols);
         const col = i % clayette.cols;
         const pos = `${String.fromCharCode(65+row)}${col+1}`;
-        div.onclick = () => openBottomSheet(bottle, cave, clayette, pos);
+        const backB = bottles.find(b => b.caveId===caveId && b.clayetteId===clayetteId && b.slot===i && b.depth==='back');
+        div.onclick = () => openBottomSheet(bottle, cave, clayette, pos, backB);
+      } else if (isPlacement && !backExists) {
+        // Peut placer une 2ème bouteille en arrière
+        div.style.cursor = 'pointer';
+        div.title = 'Placer en 2ème position (profondeur)';
+        div.onclick = () => selectSlot(caveId, clayetteId, i);
       }
+      div.title = bottle.name + (backExists ? ' + 1 en profondeur' : '');
     } else if (isSelectedSlot) {
       div.classList.add('selected');
       div.title = 'Sélectionné';
@@ -1325,15 +1834,32 @@ function renderGrid(containerId, caveId, clayetteId, isPlacement) {
 // BOTTOM SHEET — détail & retrait bouteille
 // ============================================================
 let activeBottle = null;
+let activeBackBottle = null;
 
-function openBottomSheet(bottle, cave, clayette, pos) {
+function openBottomSheet(bottle, cave, clayette, pos, backBottle) {
   activeBottle = bottle;
+  activeBackBottle = backBottle || null;
   const typeLabel = {rouge:'🔴 Rouge', blanc:'⚪ Blanc', rose:'🌸 Rosé'}[bottle.type] || bottle.type;
   document.getElementById('sheetType').textContent = typeLabel;
   document.getElementById('sheetType').className = `sheet-wine-type ${bottle.type}`;
   document.getElementById('sheetName').textContent = bottle.name;
-  document.getElementById('sheetMeta').textContent = bottle.year ? `Millésime ${bottle.year}` : 'Millésime inconnu';
+  let meta = bottle.year ? `Millésime ${bottle.year}` : 'Millésime inconnu';
+  if (backBottle) meta += ' · 2 bouteilles en profondeur';
+  document.getElementById('sheetMeta').textContent = meta;
   document.getElementById('sheetLocation').innerHTML = `📍 ${cave.name} · ${clayette.name} — ${pos}`;
+
+  // Bouton retrait : si 2 bouteilles, proposer laquelle retirer
+  const removeBtn = document.getElementById('removeBottleBtn');
+  if (backBottle) {
+    removeBtn.innerHTML = '🗑️ Retirer la bouteille de devant';
+    const removeBothBtn = document.getElementById('removeBothBtn');
+    if (removeBothBtn) removeBothBtn.style.display = 'block';
+  } else {
+    removeBtn.innerHTML = '🗑️ Retirer cette bouteille';
+    const removeBothBtn = document.getElementById('removeBothBtn');
+    if (removeBothBtn) removeBothBtn.style.display = 'none';
+  }
+
   document.getElementById('overlay').classList.add('show');
   document.getElementById('bottomSheet').classList.add('show');
 }
@@ -1348,8 +1874,20 @@ function removeBottle() {
   if (!activeBottle) return;
   const name = activeBottle.name;
   bottles = bottles.filter(b => b !== activeBottle);
+  // Si bouteille arrière, elle devient avant
+  if (activeBackBottle) {
+    activeBackBottle.depth = 'front';
+  }
   closeBottomSheet();
-  showToast(`🗑️ "${name}" retirée de la cave`);
+  showToast(`🗑️ "${name}" retirée`);
+  renderPlanTab();
+}
+
+function removeBothBottles() {
+  if (!activeBottle) return;
+  bottles = bottles.filter(b => b !== activeBottle && b !== activeBackBottle);
+  closeBottomSheet();
+  showToast('🗑️ 2 bouteilles retirées');
   renderPlanTab();
 }
 
@@ -1374,21 +1912,427 @@ function deselectSlot(caveId, clayetteId, slot) {
 // ============================================================
 // PLAN TAB
 // ============================================================
+// ============================================================
+// VUE CAVE PLAN — Vue frontale fixe, quinconce profondeur+hauteur
+// ============================================================
+let canvasMoveMode = false;
+let canvasMoveSource = null; // zone sélectionnée
+
+function toggleCanvasMoveMode() {
+  canvasMoveMode = !canvasMoveMode;
+  canvasMoveSource = null;
+  const btn = document.getElementById('moveModeBtn');
+  if (btn) {
+    btn.textContent = canvasMoveMode ? '✅ Déplacer' : '↔ Déplacer';
+    btn.style.background = canvasMoveMode ? 'rgba(201,100,80,0.35)' : '';
+    btn.style.border = canvasMoveMode ? '1px solid #C9453A' : '';
+  }
+  const cv = document.getElementById('caveCanvas');
+  if (cv && cv._caveId != null) drawCave(cv._caveId);
+  if (canvasMoveMode) showToast("Tape la bouteille à déplacer");
+  else showToast("Mode déplacement désactivé");
+}
+
+function drawCave(caveId) {
+  const cave = caves.find(c => c.id === caveId);
+  if (!cave) return;
+  const cv = document.getElementById('caveCanvas');
+  if (!cv) return;
+  const W = cv.offsetWidth || 380;
+  if (cv.width !== W) cv.width = W;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, cv.height);
+
+  const R   = 15;   // rayon bouteille rangée avant
+  const GAP = 3;    // gap horizontal entre bouteilles
+  const COL = R * 2 + GAP;
+  const DY  = R * Math.sqrt(3) * 0.95; // espacement Y en quinconce (≈ 1.73R)
+
+  const bots = bottles.filter(b => b.caveId === caveId);
+  const hitZones = [];
+  let yBase = 12;
+
+  cave.clayettes.forEach((cl) => {
+    const depth = cl.rows || 1;
+    const cols  = cl.cols;
+    const shelfW = cols * COL + 20;
+    const CX = W / 2;
+
+    // Hauteur de la section: depth rangées en quinconce
+    // Rangée 0 en bas, rangées suivantes au-dessus (perspective)
+    // Section height = R + (depth-1)*DY + R + padding
+    const sectionH = R + (depth - 1) * DY + R + 18;
+
+    // ─── Rangées de profondeur, arrière → avant ─────────────────
+    for (let d = depth - 1; d >= 0; d--) {
+      // Profondeur: rangée 0 = devant (plus grande, plus bas), rangée d-1 = derrière (plus petite, plus haut)
+      const scale  = 1 - d * 0.06;
+      const Rd     = R * scale;
+      const alpha  = 1 - d * 0.18; // légère transparence pour les rangées arrière
+      // Position Y: rangées arrière plus hautes (quinconce vertical)
+      const rowY   = yBase + sectionH - R - d * DY;
+      // Quinconce horizontal: rangées impaires décalées de demi-pas
+      const xOff   = (d % 2 === 1) ? COL / 2 : 0;
+      const isCulot = (d % 2 === 1); // alternance bouchon/culot
+
+      for (let c = 0; c < cols; c++) {
+        const slot = d * cols + c;
+        const bot  = bots.find(b => b.clayetteId === cl.id && b.slot === slot);
+        const cx   = CX - shelfW / 2 + 10 + R + c * COL + xOff;
+        const cy   = rowY;
+
+        const isHL  = highlightedBottle &&
+          highlightedBottle.caveId     === caveId &&
+          highlightedBottle.clayetteId === cl.id &&
+          highlightedBottle.slot       === slot;
+        const isSel = canvasMoveSource && canvasMoveSource.slot === slot && canvasMoveSource.cl.id === cl.id;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        if (bot) {
+          const wc = bot.type === 'rouge' ? ['#E04040','#8B1515','#300505'] :
+                     bot.type === 'blanc' ? ['#E8CC60','#A07820','#382808'] :
+                                            ['#E06070','#A02848','#38081A'];
+
+          // Ombre portée
+          ctx.shadowColor = 'rgba(0,0,0,0.4)';
+          ctx.shadowBlur  = d === 0 ? 6 : 3;
+          ctx.shadowOffsetY = d === 0 ? 2 : 1;
+
+          // Corps cercle
+          const gr = ctx.createRadialGradient(cx - Rd * .15, cy - Rd * .2, Rd * .05, cx, cy, Rd);
+          gr.addColorStop(0, wc[0]);
+          gr.addColorStop(0.5, wc[1]);
+          gr.addColorStop(1, wc[2]);
+          ctx.beginPath();
+          ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
+          ctx.fillStyle = gr;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Bord anneau
+          ctx.beginPath();
+          ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${bot.type==='rouge'?'180,40,40':bot.type==='blanc'?'200,160,60':'180,60,80'},0.6)`;
+          ctx.lineWidth = d === 0 ? 1.5 : 0.8;
+          ctx.stroke();
+
+          if (isCulot) {
+            // Vue culot: punt central sombre
+            const gc = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rd * .45);
+            gc.addColorStop(0, 'rgba(0,0,0,0.55)');
+            gc.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * .45, 0, Math.PI * 2);
+            ctx.fillStyle = gc;
+            ctx.fill();
+            // Anneau culot
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * .6, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          } else {
+            // Vue bouchon: liège central
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * .28, 0, Math.PI * 2);
+            ctx.fillStyle = '#D4C08A';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * .3, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+
+          // Highlight sélection accords/synthèse
+          if (isHL) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * 1.18, 0, Math.PI * 2);
+            ctx.strokeStyle = '#E8C87A';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#C9A84C';
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+
+          // Highlight source déplacement
+          if (isSel) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, Rd * 1.2, 0, Math.PI * 2);
+            ctx.strokeStyle = '#FF6060';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          ctx.restore();
+          hitZones.push({ cx, cy, r: Rd * 1.1, bot, cave, cl, d, c, slot, isEmpty: false });
+
+        } else {
+          // Slot vide
+          ctx.beginPath();
+          ctx.arc(cx, cy, Rd, 0, Math.PI * 2);
+          ctx.strokeStyle = canvasMoveMode && canvasMoveSource
+            ? 'rgba(100,200,100,0.45)'   // vert si mode déplacement actif
+            : 'rgba(201,168,76,0.15)';
+          ctx.lineWidth = canvasMoveMode && canvasMoveSource ? 1.5 : 0.8;
+          ctx.setLineDash([3, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+          hitZones.push({ cx, cy, r: Rd * 1.1, bot: null, cave, cl, d, c, slot, isEmpty: true });
+        }
+      }
+    }
+
+    // ─── Étiquette clayette ──────────────────────────────────
+    ctx.fillStyle = 'rgba(212,180,131,0.5)';
+    ctx.font = '9px DM Sans,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(cl.name, CX - shelfW / 2 + 2, yBase + 10);
+
+    // ─── Planche bois (séparateur entre clayettes) ───────────
+    const ySep = yBase + sectionH + 3;
+    const x0   = CX - shelfW / 2;
+    const x1   = CX + shelfW / 2;
+    const shelfH = 7;
+    const sg = ctx.createLinearGradient(x0, ySep, x0, ySep + shelfH);
+    sg.addColorStop(0, '#C8A040');
+    sg.addColorStop(0.4, '#A07820');
+    sg.addColorStop(1, '#5A3A10');
+    ctx.beginPath();
+    ctx.roundRect(x0, ySep, shelfW, shelfH, 2);
+    ctx.fillStyle = sg;
+    ctx.fill();
+    // Veinage
+    ctx.save(); ctx.globalAlpha = 0.08;
+    for (let i = 1; i < 5; i++) {
+      const xv = x0 + (shelfW / 5) * i;
+      ctx.beginPath(); ctx.moveTo(xv, ySep); ctx.lineTo(xv, ySep + shelfH);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 0.5; ctx.stroke();
+    }
+    ctx.restore();
+
+    yBase += sectionH + shelfH + 10;
+  });
+
+  cv._hitZones = hitZones;
+  cv._caveId   = caveId;
+
+  const stats = document.getElementById('planStats');
+  if (stats) stats.textContent = `${bots.length} bouteilles · Vue frontale — ↔ Déplacer`;
+  document.getElementById('totalBadge').textContent = `${bottles.length} bouteille${bottles.length > 1 ? 's' : ''}`;
+}
+
+function render3D(caveId) {
+  const cave = caves.find(c => c.id === caveId);
+  if (!cave) return;
+  const cv = document.getElementById('caveCanvas');
+  if (!cv) return;
+  const R = 15, DY = R * Math.sqrt(3) * 0.95;
+
+  // Calculer la hauteur nécessaire
+  let totalH = 12;
+  cave.clayettes.forEach(cl => {
+    const depth = cl.rows || 1;
+    totalH += R + (depth - 1) * DY + R + 18 + 7 + 10;
+  });
+  cv.height = Math.max(260, totalH + 20);
+
+  drawCave(caveId);
+
+  // Seuls les taps sur canvas — pas de rotation
+  cv.onmousedown = (e) => {
+    e.preventDefault();
+    const r = cv.getBoundingClientRect();
+    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    handleCanvasClick(cv, cx, cy);
+  };
+  cv.ontouchstart = (e) => {
+    const r = cv.getBoundingClientRect();
+    const t = e.touches[0];
+    handleCanvasClick(cv, t.clientX - r.left, t.clientY - r.top);
+  };
+  cv.onmousemove = null;
+  cv.onmouseup   = null;
+  cv.ontouchmove = null;
+  cv.ontouchend  = null;
+  cv.style.cursor = canvasMoveMode ? 'pointer' : 'default';
+}
+
+function initCaveRotation() {}
+function applyCaveRotation() {}
+function endCaveRotation() {}
+
+function handleCanvasClick(cv, cx, cy) {
+  const zones = cv._hitZones || [];
+  let best = null, bestD = 9999;
+  zones.forEach(z => {
+    const dx = cx - z.cx, dy = cy - z.cy, d = Math.sqrt(dx*dx + dy*dy);
+    if (d < z.r && d < bestD) { bestD = d; best = z; }
+  });
+  if (!best) {
+    if (canvasMoveMode) { canvasMoveSource = null; drawCave(cv._caveId); }
+    return;
+  }
+  if (canvasMoveMode) {
+    if (!canvasMoveSource) {
+      if (best.isEmpty) { showToast("Tape la bouteille à déplacer"); return; }
+      canvasMoveSource = best;
+      drawCave(cv._caveId);
+      showToast("Tape l'emplacement destination");
+    } else {
+      if (best.isEmpty) {
+        const b = canvasMoveSource.bot;
+        b.caveId     = best.cave.id;
+        b.clayetteId = best.cl.id;
+        b.slot       = best.slot;
+        canvasMoveSource = null;
+        drawCave(cv._caveId);
+        showToast("✅ Bouteille déplacée !");
+      } else if (best.bot && best.bot !== canvasMoveSource.bot) {
+        // Changer la sélection
+        canvasMoveSource = best;
+        drawCave(cv._caveId);
+        showToast("Nouvelle bouteille sélectionnée");
+      } else {
+        canvasMoveSource = null;
+        drawCave(cv._caveId);
+      }
+    }
+    return;
+  }
+  // Mode normal → fiche détail
+  if (!best.isEmpty) {
+    openBottomSheet(best.bot, best.cave, best.cl, `${best.cl.name} R${best.d+1}C${best.c+1}`, null);
+  }
+}
+
 function renderPlanTab() {
+  const banner = document.getElementById('highlightBanner');
+  if (banner) banner.style.display = highlightedBottle ? 'flex' : 'none';
+
   renderCaveTabs('planCaveTabs', planActiveCave, (id) => {
     planActiveCave = id;
-    const cave = caves.find(c=>c.id===id);
-    planActiveClayette = cave.clayettes[0].id;
     renderPlanTab();
   });
-
-  renderClayetteTabs('planClayetteTabs', planActiveCave, planActiveClayette, (id) => {
-    planActiveClayette = id;
-    renderPlanTab();
-  });
-
-  renderGrid('planGrid', planActiveCave, planActiveClayette, false);
+  render3D(planActiveCave);
+  initCaveRotation();
 }
+
+// ── Rotation Y du rack (gauche/droite = voir profondeur) ──
+
+function initCaveRotation() {
+  // Canvas rotation is handled by canvas events in initCaveRotation above
+}
+
+
+
+
+
+document.addEventListener('touchcancel', function() { if (dragState) cancelDrag(); });
+
+// ============================================================
+// LISTENERS GLOBAUX CONSOLIDÉS
+// ============================================================
+document.addEventListener('mousemove', function(e) {
+  // Sep clayette drag
+  const rack = document.getElementById('rack3d');
+  if (rack && rack._sepDragHandlers && rack._sepDragHandlers.move) {
+    rack._sepDragHandlers.move(e);
+  }
+  // Cave rotation
+  if (canvasDrag) { updateCanvasDrag(e.clientX - (document.getElementById('caveCanvas')?.getBoundingClientRect().left||0), e.clientY - (document.getElementById('caveCanvas')?.getBoundingClientRect().top||0)); }
+  else if (canvasRotDrag) { applyCaveRotation(e.clientX, e.clientY); }
+  // Bottle drag — démarrage si >5px
+  if (pendingMouseDrag && !dragState) {
+    const dx = Math.abs(e.clientX - pendingMouseDrag.x);
+    const dy = Math.abs(e.clientY - pendingMouseDrag.y);
+    if (dx > 5 || dy > 5) {
+      rotDrag = null;
+      const p = pendingMouseDrag;
+      pendingMouseDrag = null;
+      startDrag(e.clientX, e.clientY, p.bottle, p.el, p.caveId, p.clayetteId, p.slotIndex);
+    }
+  }
+  if (dragState) onDragMove(e.clientX, e.clientY);
+});
+
+document.addEventListener('mouseup', function(e) {
+  const rack = document.getElementById('rack3d');
+  if (rack && rack._sepDragHandlers && rack._sepDragHandlers.end) {
+    rack._sepDragHandlers.end();
+  }
+  if (canvasDrag) { const r=document.getElementById('caveCanvas')?.getBoundingClientRect()||{left:0,top:0}; endCanvasDrag(e.clientX-r.left, e.clientY-r.top); }
+  else if (canvasRotDrag) { endCaveRotation(); }
+  pendingMouseDrag = null;
+  if (canvasDrag) { const t=e.changedTouches[0]; const r=document.getElementById('caveCanvas')?.getBoundingClientRect()||{left:0,top:0}; endCanvasDrag(t.clientX-r.left, t.clientY-r.top); }
+  else if (canvasRotDrag) { endCaveRotation(); }
+  if (dragState) onDragEnd();
+});
+
+document.addEventListener('touchmove', function(e) {
+  const rack = document.getElementById('rack3d');
+  if (rack && rack._sepDragHandlers && rack._sepDragHandlers.move) {
+    rack._sepDragHandlers.move(e);
+  }
+  if (canvasDrag) { const r=document.getElementById('caveCanvas')?.getBoundingClientRect()||{left:0,top:0}; updateCanvasDrag(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top); }
+  else if (canvasRotDrag && !dragState) { applyCaveRotation(e.touches[0].clientX, e.touches[0].clientY); }
+  if (dragState) {
+    e.preventDefault();
+    onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+  const rack = document.getElementById('rack3d');
+  if (rack && rack._sepDragHandlers && rack._sepDragHandlers.end) {
+    rack._sepDragHandlers.end();
+  }
+  if (dragState) onDragEnd();
+});
+
+function attachDragListeners(el, bottle, caveId, clayetteId, slotIndex) {
+  // ── MOUSE ──────────────────────────────────────────────────
+  el.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    didDrag = false;
+    startDrag(e.clientX, e.clientY, bottle, el, caveId, clayetteId, slotIndex);
+  });
+
+  // ── TOUCH (appui long 180ms) ───────────────────────────────
+  let pressTimer = null;
+  let tStartX, tStartY, tMoved = false;
+
+  el.addEventListener('touchstart', function(e) {
+    tStartX = e.touches[0].clientX;
+    tStartY = e.touches[0].clientY;
+    tMoved = false;
+    pressTimer = setTimeout(() => {
+      if (!tMoved) {
+        didDrag = false;
+        startDrag(e.touches[0].clientX, e.touches[0].clientY, bottle, el, caveId, clayetteId, slotIndex);
+      }
+    }, 180);
+  }, {passive: true});
+
+  el.addEventListener('touchmove', function(e) {
+    const dx = Math.abs(e.touches[0].clientX - tStartX);
+    const dy = Math.abs(e.touches[0].clientY - tStartY);
+    if (dx > 8 || dy > 8) { tMoved = true; clearTimeout(pressTimer); pressTimer = null; }
+  }, {passive: true});
+
+  el.addEventListener('touchend', function() {
+    clearTimeout(pressTimer); pressTimer = null;
+  }, {passive: true});
+}
+
 
 // ============================================================
 // SHARED TAB RENDERERS
@@ -1420,115 +2364,353 @@ function renderClayetteTabs(containerId, caveId, activeClayetteId, onSelect) {
 }
 
 // ============================================================
-// ACCORDS
+// ACCORDS IA
 // ============================================================
-const accords = {
-  'viandes-rouges': {
-    name:'Gevrey-Chambertin 2016', meta:'Bourgogne · Rouge · 2016',
-    loc:'Cave Principale, Clayette 1 — B3',
-    temp:'16–18°C', alt:'Saint-Émilion, Pomerol, Côtes-du-Rhône',
-    note:'Un Bourgogne charnu aux tanins soyeux et aux arômes de cerise noire et de sous-bois. Il sublime les viandes rouges grillées, un rôti de bœuf ou un magret de canard. Décanter 30 min avant service.'
-  },
-  'volaille': {
-    name:'Puligny-Montrachet 2020', meta:'Bourgogne · Blanc · 2020',
-    loc:'Cave Principale, Clayette 2 — A1',
-    temp:'12–14°C', alt:'Meursault, Viognier du Rhône',
-    note:'La richesse beurrée et la minéralité ciselée de ce grand Bourgogne blanc s\'accordent sublimement avec une poularde à la crème, une dinde farcie ou un poulet rôti aux herbes.'
-  },
-  'poisson': {
-    name:'Chablis 1er Cru 2019', meta:'Bourgogne · Blanc · 2019',
-    loc:'Cave Principale, Clayette 2 — C1',
-    temp:'10–12°C', alt:'Sancerre, Muscadet sur lie, Picpoul de Pinet',
-    note:'La vivacité tranchante et la minéralité iodée du Chablis magnifient un sole meunière, un bar en croûte de sel ou un turbot sauce hollandaise. Un accord classique et indémodable.'
-  },
-  'fruits-mer': {
-    name:'Sancerre Blanc 2022', meta:'Loire · Blanc · 2022',
-    loc:'Cave Principale, Clayette 2 — D2',
-    temp:'8–10°C', alt:'Muscadet, Pouilly-Fumé, Champagne brut',
-    note:'L\'acidité fraîche et les notes d\'agrumes et de silex du Sancerre créent un mariage parfait avec huîtres, langoustes, crevettes et Saint-Jacques. À servir bien frais pour un maximum de fraîcheur.'
-  },
-  'fromage': {
-    name:'Saint-Émilion 2018', meta:'Bordeaux · Rouge · 2018',
-    loc:'Cave Principale, Clayette 1 — D2',
-    temp:'17–18°C', alt:'Châteauneuf-du-Pape, Cahors, Maury',
-    note:'Ce Bordeaux charpenté aux tanins présents dialogue avec les fromages à pâte pressée cuite (Comté, Beaufort) et les pâtes molles (Brie, Camembert). Éviter les fromages de chèvre qui se marient mieux aux blancs.'
-  },
-  'dessert': {
-    name:'Sauternes 2017', meta:'Bordeaux · Blanc liquoreux · 2017',
-    loc:'Cave Secondaire, Clayette 1 — A3',
-    temp:'8–10°C', alt:'Monbazillac, Jurançon moelleux, Muscat de Beaumes-de-Venise',
-    note:'Les arômes de miel, d\'abricot confit et de vanille du Sauternes créent un mariage d\'exception avec les tartes aux fruits jaunes, le foie gras poêlé et le roquefort. Règle d\'or : le vin doit être plus sucré que le dessert.'
-  },
-  'aperitif': {
-    name:'Bandol Rosé 2023', meta:'Provence · Rosé · 2023',
-    loc:'Cave Secondaire, Clayette 1 — A2',
-    temp:'8–10°C', alt:'Côtes de Provence rosé, Tavel, Crémant d\'Alsace',
-    note:'Frais, fruité et d\'une élégance rare, ce Bandol rosé à la robe saumon pâle s\'impose comme le compagnon idéal de l\'apéritif : olives, tapenade, anchois, petits fours salés et crudités.'
-  },
-  'charcuterie': {
-    name:'Côtes de Provence Rosé 2024', meta:'Provence · Rosé · 2024',
-    loc:'Cave Secondaire, Clayette 1 — B1',
-    temp:'8–10°C', alt:'Gamay du Beaujolais, Pinot Noir d\'Alsace',
-    note:'Les notes croquantes de framboise et de pêche blanche de ce rosé de Provence tranchent à merveille avec le gras de la charcuterie : jambon cru, saucisson, pâté en croûte et rillettes.'
-  },
-  'barbecue': {
-    name:'Château Margaux 2018', meta:'Bordeaux · Rouge · 2018',
-    loc:'Cave Principale, Clayette 1 — A1',
-    temp:'17–19°C', alt:'Zinfandel californien, Malbec argentin, Côtes-du-Rhône villages',
-    note:'La puissance des tanins et les arômes de fruits noirs et de cèdre de ce grand Bordeaux subliment les viandes grillées au feu de bois — entrecôte, côte de bœuf, agneau. Un accord d\'exception pour une occasion particulière.'
-  },
-  'gibier': {
-    name:'Pomerol 2019', meta:'Bordeaux · Rouge · 2019',
-    loc:'Cave Principale, Clayette 1 — E4',
-    temp:'17–18°C', alt:'Gevrey-Chambertin, Côte-Rôtie, Crozes-Hermitage',
-    note:'Le Pomerol avec ses arômes de truffe, de réglisse et de fruits confits est l\'allié naturel du gibier à plume (faisan, perdrix) et à poil (chevreuil, sanglier). La complexité du vin répond à la puissance de ces viandes sauvages.'
-  },
-  'pates-risotto': {
-    name:'Gevrey-Chambertin 2016', meta:'Bourgogne · Rouge · 2016',
-    loc:'Cave Principale, Clayette 1 — B3',
-    temp:'15–17°C', alt:'Chianti Classico, Barbera d\'Asti, Pinot Noir',
-    note:'Pour les pâtes à la bolognaise ou un risotto aux champignons des bois, un Bourgogne rouge s\'impose avec finesse. Pour les pâtes aux fruits de mer, préférez le Chablis ou un blanc de Loire bien minéral.'
-  },
-  'vegetarien': {
-    name:'Chablis 1er Cru 2019', meta:'Bourgogne · Blanc · 2019',
-    loc:'Cave Principale, Clayette 2 — C1',
-    temp:'10–12°C', alt:'Viognier, Roussanne, Grüner Veltliner',
-    note:'La fraîcheur et la minéralité du Chablis magnifient les plats végétariens délicats : quiche aux légumes, tarte à la tomate, gratin de courgettes ou risotto aux asperges. Un accord vif et sans faute.'
-  },
-  'fondue-raclette': {
-    name:'Pouilly-Fumé 2022', meta:'Loire · Blanc · 2022',
-    loc:'Cave Principale, Clayette 2 — A4',
-    temp:'10–12°C', alt:'Chasselas suisse, Apremont, Roussette de Savoie',
-    note:'L\'acidité vive du Pouilly-Fumé est indispensable pour contrebalancer le gras fondu de la raclette ou de la fondue savoyarde. Les vins de Savoie sont également des classiques absolus pour ces plats d\'hiver.'
-  },
-  'epice': {
-    name:'Bandol Rosé 2023', meta:'Provence · Rosé · 2023',
-    loc:'Cave Secondaire, Clayette 1 — A2',
-    temp:'8–10°C', alt:'Gewurztraminer d\'Alsace, Riesling demi-sec, Viognier',
-    note:'Face aux plats épicés (tajine, curry, tikka masala), un rosé sec et fruité ou un blanc aromatique comme le Gewurztraminer tient parfaitement le rôle : leur fruité calme le piquant sans l\'effacer. Éviter les rouges tanniques qui amplifient la chaleur.'
-  },
-  'sushi': {
-    name:'Sancerre Blanc 2022', meta:'Loire · Blanc · 2022',
-    loc:'Cave Principale, Clayette 2 — D2',
-    temp:'8–10°C', alt:'Muscadet, Chablis, Pinot Gris d\'Alsace',
-    note:'La fraîcheur iodée et l\'acidité du Sancerre créent un pont naturel avec les saveurs marines et umami des sushis et sashimis. Pour les plats asiatiques plus doux (nems, thaï), un rosé de Provence sera également excellent.'
-  },
-};
 
-function getAccord(type, el) {
-  document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  const a = accords[type];
-  if (!a) return;
-  document.getElementById('recoName').textContent = a.name;
-  document.getElementById('recoMeta').textContent = a.meta;
-  document.getElementById('recoLocation').innerHTML = `📍 ${a.loc}`;
-  document.getElementById('recoTemp').innerHTML = `🌡️ Servir à <strong>${a.temp}</strong>`;
-  document.getElementById('recoAlt').innerHTML = `↔️ Alternatives : <em>${a.alt}</em>`;
-  document.getElementById('recoNote').textContent = a.note;
-  document.getElementById('recoCard').classList.add('show');
+function setRepas(text) {
+  document.getElementById('accordRepas').value = text;
+  document.getElementById('accordRepas').focus();
 }
 
+async function getAccordIA() {
+  const repas = document.getElementById('accordRepas').value.trim();
+  if (!repas) { showToast('⚠️ Décris ton repas d\'abord'); return; }
+  if (!apiKey) { showToast('❌ Clé API manquante → Config'); return; }
+
+  const budget = parseFloat(document.getElementById('accordBudget').value) || null;
+  const count = parseInt(document.getElementById('accordCount').value) || 3;
+
+  document.getElementById('accordLoading').style.display = 'block';
+  document.getElementById('accordResults').innerHTML = '';
+
+  // Construire la liste des bouteilles en cave
+  const caveList = bottles.map((b, i) => {
+    const cave = caves.find(c => c.id === b.caveId);
+    const cl = cave?.clayettes.find(cl => cl.id === b.clayetteId);
+    const depth = cl ? (cl.rows || 1) : 1;
+    const row = Math.floor(b.slot / (cl?.cols || 1));
+    const col = (b.slot % (cl?.cols || 1)) + 1;
+    const pos = `rangée ${row + 1}, colonne ${col}`;
+    const loc = `${cave?.name || '?'} › ${cl?.name || '?'} › ${pos}`;
+    return `${i+1}. ${b.name}${b.year ? ' ' + b.year : ''} | type:${b.type} | région:${b.region || '?'} | prix:${b.price != null ? b.price + '€' : '?'} | emplacement:${loc}`;
+  }).join('\n');
+
+  const budgetStr = budget ? `Budget maximum : ${budget}€ par bouteille.` : 'Pas de contrainte de budget.';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey.trim(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        messages: [{
+          role: 'user',
+          content: `Tu es un sommelier expert. Voici le repas prévu : "${repas}".
+${budgetStr}
+
+Voici les bouteilles disponibles dans la cave (avec leur emplacement exact) :
+${caveList || 'Aucune bouteille en cave pour le moment.'}
+
+Propose exactement ${count} accords mets-vins parmi ces bouteilles (ou les meilleures si moins disponibles).
+Trie par pertinence (meilleur accord en premier). Si un prix est disponible, prends-le en compte pour le budget.
+
+Réponds UNIQUEMENT en JSON valide, sans backticks :
+[
+  {
+    "rang": 1,
+    "nom": "nom exact de la bouteille",
+    "millesime": 2018,
+    "type": "rouge",
+    "region": "Bordeaux",
+    "prix": 45,
+    "temperature": "17-18°C",
+    "score_accord": 95,
+    "pourquoi": "explication courte en 1-2 phrases pourquoi cet accord fonctionne",
+    "emplacement": "RECOPIE ICI l'emplacement exact tel qu'il apparaît dans la liste ci-dessus, par exemple : Cave Principale › Clayette 1 › rangée 2, colonne 3"
+  }
+]
+
+IMPORTANT : le champ "emplacement" doit contenir l'emplacement EXACT copié depuis la liste ci-dessus. Ne mets pas null.
+Si la cave est vide, propose des vins génériques adaptés sans emplacement.`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = (data.content || []).find(b => b.type === 'text')?.text || '';
+    const suggestions = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    document.getElementById('accordLoading').style.display = 'none';
+    renderAccordResults(suggestions, repas);
+
+  } catch(err) {
+    document.getElementById('accordLoading').style.display = 'none';
+    document.getElementById('accordResults').innerHTML = `<div class="info-banner" style="border-color:rgba(139,26,26,0.4);color:#ff9090;">❌ Erreur : ${err.message}</div>`;
+  }
+}
+
+function renderAccordResults(suggestions, repas) {
+  const container = document.getElementById('accordResults');
+  container.innerHTML = `<div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">
+    ${suggestions.length} accord${suggestions.length>1?'s':''} pour : <em style="color:var(--cream)">${repas}</em>
+  </div>`;
+
+  suggestions.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'accord-result-card' + (i === 0 ? ' top' : '');
+
+    const priceTag = s.prix != null ? `<span class="accord-tag price">💶 ${s.prix}€</span>` : '';
+    const tempTag = s.temperature ? `<span class="accord-tag temp">🌡️ ${s.temperature}</span>` : '';
+    const scoreTag = s.score_accord ? `<span class="accord-tag score">★ ${s.score_accord}%</span>` : '';
+    const locTag = s.emplacement ? `<div class="accord-location">📍 ${s.emplacement}</div>` : '';
+    const medal = ['🥇','🥈','🥉'][i] || `${i+1}.`;
+
+    card.innerHTML = `
+      <div class="accord-rank">${medal} Accord n°${s.rang}</div>
+      <div class="accord-wine-name">${s.nom}${s.millesime ? ' ' + s.millesime : ''}</div>
+      <div class="accord-meta">${[s.type, s.region].filter(Boolean).map(t => t.charAt(0).toUpperCase()+t.slice(1)).join(' · ')}</div>
+      <div class="accord-tags">${priceTag}${tempTag}${scoreTag}</div>
+      <div class="accord-why">${s.pourquoi}</div>
+      ${locTag}`;
+
+    // Bouton localiser
+    const locateBtn = document.createElement('button');
+    locateBtn.className = 'btn btn-secondary btn-sm';
+    locateBtn.style.cssText = 'margin-top:10px;width:100%;';
+    locateBtn.innerHTML = '🗺️ Voir dans la cave';
+    locateBtn.onclick = () => locateBottleInCave(s.nom, s.millesime);
+    card.appendChild(locateBtn);
+
+    container.appendChild(card);
+  });
+}
+
+// ============================================================
+// LOCALISATION BOUTEILLE DEPUIS ACCORDS
+// ============================================================
+let highlightedBottle = null; // {caveId, clayetteId, slot}
+let highlightOriginTab = 'accords';
+
+function locateBottleInCave(nom, millesime) {
+  // Trouver la bouteille correspondante
+  const bottle = bottles.find(b => {
+    const nameMatch = b.name && b.name.toLowerCase().includes(nom.toLowerCase().substring(0, 15));
+    const yearMatch = !millesime || b.year == millesime;
+    return nameMatch && yearMatch;
+  }) || bottles.find(b => b.name && b.name.toLowerCase().includes(nom.toLowerCase().substring(0, 10)));
+
+  if (!bottle) {
+    showToast('⚠️ Bouteille introuvable dans la cave');
+    return;
+  }
+
+  highlightedBottle = { caveId: bottle.caveId, clayetteId: bottle.clayetteId, slot: bottle.slot };
+  highlightOriginTab = 'accords';
+  planActiveCave = bottle.caveId;
+  switchTab('plan');
+  showToast('📍 Bouteille mise en évidence !');
+}
+
+function clearHighlight() {
+  highlightedBottle = null;
+  document.getElementById('highlightBanner').style.display = 'none';
+  switchTab(highlightOriginTab || 'accords');
+}
+
+// ============================================================
+// STATS & SYNTHÈSE
+// ============================================================
+function renderStats() {
+  const container = document.getElementById('statsContent');
+  const year = new Date().getFullYear();
+
+  // ── Calculs ───────────────────────────────────────────────
+  const total = bottles.length;
+  const withPrice = bottles.filter(b => b.price != null);
+  const totalValue = withPrice.reduce((s, b) => s + b.price, 0);
+  const avgPrice = withPrice.length ? Math.round(totalValue / withPrice.length) : 0;
+  const maxBottle = bottles.reduce((max, b) => (b.price != null && (max == null || b.price > max.price)) ? b : max, null);
+
+  const byType = { rouge: 0, blanc: 0, rose: 0 };
+  bottles.forEach(b => { if (byType[b.type] !== undefined) byType[b.type]++; });
+
+  // Régions
+  const byRegion = {};
+  bottles.forEach(b => {
+    const r = b.region || 'Inconnue';
+    byRegion[r] = (byRegion[r] || 0) + 1;
+  });
+  const topRegions = Object.entries(byRegion).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+  // Apogée
+  const atPeak = bottles.filter(b => b.apogeeStart && b.apogeeEnd && year >= b.apogeeStart && year <= b.apogeeEnd);
+  const soonReady = bottles.filter(b => b.apogeeStart && b.apogeeStart > year && b.apogeeStart <= year + 2);
+  const aging = bottles.filter(b => b.apogeeStart && b.apogeeStart > year + 2);
+
+  // Capacité totale des caves
+  const totalSlots = caves.reduce((s, cave) => s + cave.clayettes.reduce((cs, cl) => cs + cl.cols * (cl.rows || 1), 0), 0);
+  const occupancy = totalSlots ? Math.round((total / totalSlots) * 100) : 0;
+
+  // Top 5 les plus chères
+  const topBottles = [...bottles].filter(b => b.price != null).sort((a,b) => b.price - a.price).slice(0, 5);
+
+  // ── Rendu HTML ────────────────────────────────────────────
+  const typeColors = { rouge: '#C9453A', blanc: '#D4B483', rose: '#D4607A' };
+  const typeLabels = { rouge: '🔴 Rouge', blanc: '⚪ Blanc', rose: '🌸 Rosé' };
+
+  container.innerHTML = `
+
+  <!-- Hero stats -->
+  <div class="stat-hero">
+    <div class="stat-hero-item">
+      <div class="stat-hero-val">${total}</div>
+      <div class="stat-hero-lbl">Bouteilles</div>
+    </div>
+    <div class="stat-hero-item">
+      <div class="stat-hero-val">${totalValue > 0 ? totalValue + '€' : '—'}</div>
+      <div class="stat-hero-lbl">Valeur estimée</div>
+    </div>
+    <div class="stat-hero-item">
+      <div class="stat-hero-val">${avgPrice > 0 ? avgPrice + '€' : '—'}</div>
+      <div class="stat-hero-lbl">Prix moyen</div>
+    </div>
+    <div class="stat-hero-item">
+      <div class="stat-hero-val">${occupancy}%</div>
+      <div class="stat-hero-lbl">Remplissage</div>
+    </div>
+  </div>
+
+  <!-- Mini stats apogée -->
+  <div class="stat-grid">
+    <div class="stat-mini">
+      <div class="stat-mini-val" style="color:#7dce75;">${atPeak.length}</div>
+      <div class="stat-mini-lbl">🟢 À l'apogée maintenant</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-val" style="color:var(--gold-light);">${soonReady.length}</div>
+      <div class="stat-mini-lbl">🟡 Bientôt prêts (< 2 ans)</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-val" style="color:var(--text-light);">${aging.length}</div>
+      <div class="stat-mini-lbl">⚪ En garde</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-val">${totalSlots}</div>
+      <div class="stat-mini-lbl">📦 Emplacements total</div>
+    </div>
+  </div>
+
+  ${atPeak.length > 0 ? `
+  <div class="card">
+    <div class="card-title" style="color:#7dce75;">🟢 À l'apogée maintenant</div>
+    ${atPeak.map(b => `
+      <div class="wine-list-item" data-bottle-idx="${bottles.indexOf(b)}" style="cursor:pointer;" title="Voir dans la cave">
+        <div class="wine-list-dot" style="background:${typeColors[b.type]||'#888'};"></div>
+        <div style="flex:1;">
+          <div class="wine-list-name">${b.name}</div>
+          <div class="wine-list-year">${b.year||''} ${b.region?'· '+b.region:''} · ${b.apogeeStart}–${b.apogeeEnd}</div>
+        </div>
+        <span style="font-size:14px;color:var(--gold);">🗺️</span>
+      </div>`).join('')}
+  </div>` : ''}
+
+  ${soonReady.length > 0 ? `
+  <div class="card">
+    <div class="card-title" style="color:var(--gold-light);">🟡 Bientôt prêts</div>
+    ${soonReady.map(b => `
+      <div class="wine-list-item" data-bottle-idx="${bottles.indexOf(b)}" style="cursor:pointer;" title="Voir dans la cave">
+        <div class="wine-list-dot" style="background:${typeColors[b.type]||'#888'};"></div>
+        <div style="flex:1;">
+          <div class="wine-list-name">${b.name}</div>
+          <div class="wine-list-year">${b.year||''} ${b.region?'· '+b.region:''} · Prêt en ${b.apogeeStart}</div>
+        </div>
+        <span style="font-size:14px;color:var(--gold);">🗺️</span>
+      </div>`).join('')}
+  </div>` : ''}
+
+  <!-- Répartition par type -->
+  <div class="card">
+    <div class="card-title">🍷 Répartition par type</div>
+    ${Object.entries(byType).map(([type, count]) => `
+      <div class="stat-bar-row">
+        <div class="stat-bar-label">${typeLabels[type]}</div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill" style="width:${total ? Math.round(count/total*100) : 0}%;background:${typeColors[type]};"></div>
+        </div>
+        <div class="stat-bar-val">${count} <span style="color:var(--text-light);font-size:10px;">(${total ? Math.round(count/total*100) : 0}%)</span></div>
+      </div>`).join('')}
+  </div>
+
+  <!-- Top régions -->
+  <div class="card">
+    <div class="card-title">🗺️ Top régions</div>
+    ${topRegions.map(([region, count]) => `
+      <div class="stat-bar-row">
+        <div class="stat-bar-label" style="font-size:11px;">${region}</div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill" style="width:${total ? Math.round(count/total*100) : 0}%;background:var(--gold);"></div>
+        </div>
+        <div class="stat-bar-val">${count}</div>
+      </div>`).join('')}
+  </div>
+
+  ${topBottles.length > 0 ? `
+  <!-- Top 5 les plus chères -->
+  <div class="card">
+    <div class="card-title">💎 Bouteilles les plus précieuses</div>
+    ${topBottles.map((b, i) => `
+      <div class="wine-list-item" data-bottle-idx="${bottles.indexOf(b)}" style="cursor:pointer;" title="Voir dans la cave">
+        <div class="wine-list-dot" style="background:${typeColors[b.type]||'#888'};"></div>
+        <div style="flex:1;">
+          <div class="wine-list-name">${b.name}</div>
+          <div class="wine-list-year">${b.year || ''} ${b.region ? '· ' + b.region : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="wine-list-price">${b.price}€</div>
+          <span style="font-size:14px;color:var(--gold);">🗺️</span>
+        </div>
+      </div>`).join('')}
+    ${withPrice.length < total ? `<div style="font-size:11px;color:var(--text-light);margin-top:8px;text-align:center;">${total - withPrice.length} bouteille${total-withPrice.length>1?'s':''} sans prix renseigné</div>` : ''}
+  </div>` : ''}
+
+  ${maxBottle ? `
+  <!-- Bouteille star -->
+  <div class="card" data-bottle-idx="${bottles.indexOf(maxBottle)}" style="background:linear-gradient(135deg,rgba(201,168,76,0.12),var(--dark2));border-color:rgba(201,168,76,0.3);cursor:pointer;" title="Voir dans la cave">
+    <div class="card-title">⭐ Joyau de la cave</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--cream);">${maxBottle.name}</div>
+    <div style="font-size:12px;color:var(--text-light);margin:4px 0 8px;">${maxBottle.year || ''} ${maxBottle.region ? '· ' + maxBottle.region : ''}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold);">${maxBottle.price}€</div>
+      <span style="font-size:13px;color:var(--text-light);">🗺️ Voir dans la cave</span>
+    </div>
+  </div>` : ''}
+
+  `;
+
+  // Attacher les clics sur les éléments cliquables
+  container.querySelectorAll('[data-bottle-idx]').forEach(el => {
+    const idx = parseInt(el.dataset.bottleIdx);
+    const bottle = bottles[idx];
+    if (!bottle) return;
+    el.addEventListener('click', () => {
+      highlightedBottle = { caveId: bottle.caveId, clayetteId: bottle.clayetteId, slot: bottle.slot };
+      highlightOriginTab = 'stats';
+      planActiveCave = bottle.caveId;
+      switchTab('plan');
+      showToast('📍 Bouteille mise en évidence !');
+    });
+  });
+}
+
+// ============================================================
+// CONFIG
+// ============================================================
 function saveApiKey() {
   const val = document.getElementById('apiKeyInput').value.trim();
   if (!val.startsWith('sk-ant-')) {
@@ -1538,14 +2720,11 @@ function saveApiKey() {
   }
   apiKey = val;
   localStorage.setItem('cave_api_key', val);
-  document.getElementById('apiKeyStatus').textContent = '✅ Clé active et mémorisée sur cet appareil !';
+  document.getElementById('apiKeyStatus').textContent = '✅ Clé mémorisée — reconnaissance opérationnelle';
   document.getElementById('apiKeyStatus').style.color = '#7dce75';
   showToast('🔑 Clé API enregistrée !');
 }
 
-// ============================================================
-// CONFIG
-// ============================================================
 function renderConfig() {
   // Pré-remplir la clé si déjà enregistrée
   const keyInput = document.getElementById('apiKeyInput');
