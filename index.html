@@ -1946,7 +1946,7 @@ function drawCave(caveId) {
   const R   = 15;   // rayon bouteille rangée avant
   const GAP = 3;    // gap horizontal entre bouteilles
   const COL = R * 2 + GAP;
-  const DY  = R * Math.sqrt(3);        // espacement Y exact quinconce hexagonal
+  const DY  = R * 0.75;               // décalage Y pour nicher dans les creux (visuel)
 
   const bots = bottles.filter(b => b.caveId === caveId);
   const hitZones = [];
