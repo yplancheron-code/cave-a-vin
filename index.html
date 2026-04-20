@@ -1966,13 +1966,13 @@ function drawCave(caveId) {
     // ─── Rangées de profondeur, arrière → avant ─────────────────
     for (let d = depth - 1; d >= 0; d--) {
       // Profondeur: rangée 0 = devant (plus grande, plus bas), rangée d-1 = derrière (plus petite, plus haut)
-      const scale  = 1 - d * 0.10; // 10% plus petite par rang de profondeur
+      const scale  = 1 - d * 0.22; // 22% plus petite par rang de profondeur
       const Rd     = R * scale;
-      const alpha  = 1 - d * 0.22; // rangées profondes plus transparentes
+      const alpha  = 1 - d * 0.30; // rangées profondes nettement plus sombres
       // Position Y: rangées arrière plus hautes (quinconce vertical)
       const rowY   = yBase + sectionH - R - d * DY;
       // Quinconce horizontal: rangées impaires décalées de demi-pas
-      const xOff   = (d % 2 === 1) ? COL / 2 : 0;
+      const xOff   = (d % 2 === 1) ? R + GAP/2 : 0; // quinconce: décalé d'un rayon
 
       for (let c = 0; c < cols; c++) {
         const isCulot = (c + d) % 2 === 0; // damier: col+rang pair=culot, impair=bouchon
