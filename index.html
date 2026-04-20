@@ -1973,9 +1973,9 @@ function drawCave(caveId) {
       const rowY   = yBase + sectionH - R - d * DY;
       // Quinconce horizontal: rangées impaires décalées de demi-pas
       const xOff   = (d % 2 === 1) ? COL / 2 : 0;
-      const isCulot = (c + d) % 2 === 0; // damier: col+rang pair=culot, impair=bouchon
 
       for (let c = 0; c < cols; c++) {
+        const isCulot = (c + d) % 2 === 0; // damier: col+rang pair=culot, impair=bouchon
         const slot = d * cols + c;
         const bot  = bots.find(b => b.clayetteId === cl.id && b.slot === slot);
         const cx   = CX - shelfW / 2 + 10 + R + c * COL + xOff;
