@@ -1011,6 +1011,20 @@
       <label class="label">Prix de la bouteille (€)</label>
       <input type="number" id="winePrice" placeholder="Ex: 25" style="margin-bottom:12px;">
 
+      <label class="label">Sens de rangement</label>
+      <div class="type-selector" style="margin-bottom:12px;">
+        <button class="type-btn selected" id="oriBtnAuto" onclick="selectOrientation('auto',this)">
+          <span style="font-size:14px;">🔄</span> Auto
+        </button>
+        <button class="type-btn" id="oriBtnBouchon" onclick="selectOrientation('bouchon',this)">
+          <span style="font-size:14px;">🔵</span> Bouchon
+        </button>
+        <button class="type-btn" id="oriBtnCulot" onclick="selectOrientation('culot',this)">
+          <span style="font-size:14px;">⚫</span> Culot
+        </button>
+      </div>
+      <input type="hidden" id="bottleOrientation" value="auto">
+
       <label class="label">Nombre de bouteilles</label>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div class="stepper">
@@ -1268,6 +1282,7 @@
   <div class="sheet-meta" id="sheetMeta"></div>
   <div class="sheet-location" id="sheetLocation"></div>
   <div class="sheet-divider"></div>
+  <button class="btn btn-secondary" id="flipOrientationBtn" onclick="flipBottleOrientation()" style="margin-bottom:8px;">🔄 Retourner la bouteille</button>
   <button class="btn btn-danger" id="removeBottleBtn" onclick="removeBottle()" style="margin-bottom:8px;">🗑️ Retirer cette bouteille</button>
   <button class="btn btn-danger" id="removeBothBtn" onclick="removeBothBottles()" style="margin-bottom:10px;display:none;opacity:0.7;">🗑️ Retirer les 2 bouteilles</button>
   <button class="btn btn-secondary" onclick="closeBottomSheet()">Fermer</button>
@@ -1359,6 +1374,12 @@ function selectType(type, el) {
   selectedType = type;
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
+}
+
+function selectOrientation(val, btn) {
+  document.getElementById('bottleOrientation').value = val;
+  document.querySelectorAll('#oriBtnAuto,#oriBtnBouchon,#oriBtnCulot').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
 }
 
 // ============================================================
@@ -1554,6 +1575,7 @@ function goToPlacement() {
     price: parseFloat(document.getElementById('winePrice').value) || null,
     apogeeStart: parseInt(document.getElementById('apogeeStart').value) || null,
     apogeeEnd: parseInt(document.getElementById('apogeeEnd').value) || null,
+    orientation: document.getElementById('bottleOrientation')?.value || 'auto',
   };
   selectedSlots = [];
 
@@ -1738,7 +1760,7 @@ function confirmPlacement() {
       type: pendingBottle.type, name: pendingBottle.name, year: pendingBottle.year,
       region: pendingBottle.region, price: pendingBottle.price,
       apogeeStart: pendingBottle.apogeeStart, apogeeEnd: pendingBottle.apogeeEnd,
-      depth: nextDepth,
+      depth: nextDepth, orientation: pendingBottle.orientation || 'auto',
     });
   });
 
@@ -1870,14 +1892,31 @@ function closeBottomSheet() {
   activeBottle = null;
 }
 
+function flipBottleOrientation() {
+  if (!activeBottle) return;
+  // Calculer l'orientation actuelle pour savoir vers quoi basculer
+  const b = activeBottle;
+  const cave = caves.find(c => c.id === b.caveId);
+  const cl = cave?.clayettes.find(cl => cl.id === b.clayetteId);
+  if (!cl) return;
+  const d = Math.floor(b.slot / cl.cols);
+  const c = b.slot % cl.cols;
+  const autoIsCulot = (c + d) % 2 === 0;
+  const currentIsCulot = b.orientation === 'culot' || (b.orientation !== 'bouchon' && autoIsCulot);
+  // Basculer vers l'opposé
+  b.orientation = currentIsCulot ? 'bouchon' : 'culot';
+  const label = currentIsCulot ? 'Bouchon visible' : 'Culot visible';
+  showToast(`🔄 ${label}`);
+  closeBottomSheet();
+  renderPlanTab();
+}
+
+
 function removeBottle() {
   if (!activeBottle) return;
   const name = activeBottle.name;
   bottles = bottles.filter(b => b !== activeBottle);
-  // Si bouteille arrière, elle devient avant
-  if (activeBackBottle) {
-    activeBackBottle.depth = 'front';
-  }
+  if (activeBackBottle) activeBackBottle.depth = 'front';
   closeBottomSheet();
   showToast(`🗑️ "${name}" retirée`);
   renderPlanTab();
@@ -1943,217 +1982,176 @@ function drawCave(caveId) {
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, cv.height);
 
-  // Dimensions bouteille vue de côté
-  const BH  = 22;   // hauteur bouteille (rayon vertical)
-  const BW  = 58;   // longueur corps bouteille
-  const NW  = 18;   // longueur goulot
-  const NR  = 7;    // rayon goulot
-  const GAP = 4;    // gap horizontal entre bouteilles
-  const COL = BW + NW + GAP;  // largeur totale d'un slot
-  const DY  = BH * 1.05;  // décalage vertical quinconce (bouteilles se touchent presque)
+  // ── Paramètres ────────────────────────────────────────────
+  const R   = 17;   // rayon culot
+  const RN  = 11;   // rayon bouchon
+  const SP  = 2;    // écartement
+  const DY  = 27;   // espacement vertical entre rangs
+  const AL  = 0.90; // opacité rangs arrière
+
+  // Pas entre deux positions adjacentes (culot ou bouchon)
+  // step complet = culot → bouchon → culot = 2*(R+SP+RN)
+  // chaque position est à step/2 de la précédente
+  const step2 = R + SP + RN; // = step/2
 
   const bots = bottles.filter(b => b.caveId === caveId);
   const hitZones = [];
   let yBase = 14;
 
-  // Fonction dessin bouteille horizontale
-  function drawBottle(cx, cy, scale, type, corkLeft, isHL, isSel) {
-    const bh = BH * scale;
-    const bw = BW * scale;
-    const nw = NW * scale;
-    const nr = NR * scale;
-    const r  = bh; // rayon arrondi corps
-
-    const wc = type === 'rouge' ? { body:'#8B1A1A', light:'#C94040', dark:'#2A0505', cork:'#D4B060' } :
-               type === 'blanc' ? { body:'#8B6A10', light:'#D4A820', dark:'#3A2808', cork:'#E8C870' } :
-                                  { body:'#8B2040', light:'#D46080', dark:'#3A0818', cork:'#E8A0B0' };
-
-    ctx.save();
-
-    // Ombre
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur  = 4 * scale;
-    ctx.shadowOffsetY = 2 * scale;
-
-    // Corps bouteille (rectangle arrondi)
-    const x0 = corkLeft ? cx + nw : cx;
-    const bodyGrad = ctx.createLinearGradient(x0, cy - bh, x0, cy + bh);
-    bodyGrad.addColorStop(0,    wc.light);
-    bodyGrad.addColorStop(0.35, wc.body);
-    bodyGrad.addColorStop(0.65, wc.dark);
-    bodyGrad.addColorStop(1,    wc.body);
-
-    ctx.beginPath();
-    ctx.roundRect(x0, cy - bh, bw, bh * 2, bh * 0.45);
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Reflet corps
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.beginPath();
-    ctx.roundRect(x0 + bw * 0.08, cy - bh, bw * 0.84, bh * 0.75, bh * 0.3);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.restore();
-
-    // Goulot
-    const nx = corkLeft ? cx : cx + bw;
-    const goulotGrad = ctx.createLinearGradient(nx, cy - nr, nx, cy + nr);
-    goulotGrad.addColorStop(0, wc.light);
-    goulotGrad.addColorStop(0.5, wc.body);
-    goulotGrad.addColorStop(1, wc.dark);
-    ctx.beginPath();
-    ctx.roundRect(nx, cy - nr, nw, nr * 2, nr * 0.4);
-    ctx.fillStyle = goulotGrad;
-    ctx.fill();
-
-    // Bouchon (à l'extrémité du goulot)
-    const corkX = corkLeft ? cx : cx + bw + nw - nr * 0.8;
-    ctx.beginPath();
-    ctx.roundRect(corkX, cy - nr * 0.85, nr * 0.9, nr * 1.7, nr * 0.3);
-    ctx.fillStyle = wc.cork;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
-
-    // Capsule (jonction goulot-corps)
-    const capX = corkLeft ? cx + nw - nr * 0.3 : cx + bw - nr * 0.3;
-    ctx.beginPath();
-    ctx.roundRect(capX, cy - nr * 1.05, nr * 0.7, nr * 2.1, nr * 0.15);
-    ctx.fillStyle = wc.light;
-    ctx.fill();
-
-    // Étiquette sur le corps
-    const labelX = x0 + bw * 0.25;
-    const labelW = bw * 0.5;
-    const labelH = bh * 1.1;
-    ctx.save();
-    ctx.globalAlpha = 0.22;
-    ctx.beginPath();
-    ctx.roundRect(labelX, cy - labelH/2, labelW, labelH, 3);
-    ctx.fillStyle = '#F5ECD7';
-    ctx.fill();
-    ctx.restore();
-
-    // Highlight sélection
-    if (isHL) {
+  // ── Dessin culot ──────────────────────────────────────────
+  function drawCulot(cx, cy, alpha) {
+    ctx.save(); ctx.globalAlpha = alpha;
+    const g = ctx.createRadialGradient(cx, cy, R*.05, cx, cy, R*.9);
+    g.addColorStop(0,'rgba(70,100,70,.95)'); g.addColorStop(.5,'rgba(25,40,25,.97)'); g.addColorStop(1,'rgba(5,8,5,1)');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, R*.95, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(100,160,100,.5)'; ctx.lineWidth = R*.07; ctx.stroke();
+    const n = Math.round(R*2.2);
+    for (let i=0; i<n; i++) {
+      const a1=i/n*Math.PI*2, a2=(i+.5)/n*Math.PI*2;
       ctx.beginPath();
-      ctx.roundRect(x0 - 2, cy - bh - 2, bw + 4, bh * 2 + 4, bh * 0.5);
-      ctx.strokeStyle = '#E8C87A';
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#C9A84C';
-      ctx.shadowBlur = 10;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.moveTo(cx+Math.cos(a1)*R*.82, cy+Math.sin(a1)*R*.82);
+      ctx.lineTo(cx+Math.cos(a1)*R*.96, cy+Math.sin(a1)*R*.96);
+      ctx.lineTo(cx+Math.cos(a2)*R*.93, cy+Math.sin(a2)*R*.93);
+      ctx.lineTo(cx+Math.cos(a2)*R*.82, cy+Math.sin(a2)*R*.82);
+      ctx.closePath(); ctx.fillStyle = i%2===0?'rgba(80,120,80,.6)':'rgba(25,40,25,.6)'; ctx.fill();
     }
-    if (isSel) {
-      ctx.beginPath();
-      ctx.roundRect(x0 - 2, cy - bh - 2, bw + 4, bh * 2 + 4, bh * 0.5);
-      ctx.strokeStyle = '#FF6060';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    ctx.restore();
-    return { x: x0, y: cy - bh, w: bw, h: bh * 2 };
+    ctx.beginPath(); ctx.arc(cx, cy, R*.76, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(110,170,110,.4)'; ctx.lineWidth = R*.07; ctx.stroke();
+    const gp = ctx.createRadialGradient(cx,cy,0,cx,cy,R*.5);
+    gp.addColorStop(0,'rgba(0,0,0,.9)'); gp.addColorStop(1,'rgba(20,35,20,.3)');
+    ctx.beginPath(); ctx.arc(cx, cy, R*.5, 0, Math.PI*2); ctx.fillStyle = gp; ctx.fill();
+    ctx.save(); ctx.globalAlpha *= .22;
+    ctx.beginPath(); ctx.arc(cx, cy-R*.35, R*.55, 0, Math.PI*2); ctx.fillStyle='#90C890'; ctx.fill();
+    ctx.restore(); ctx.restore();
   }
 
-  function drawEmptySlot(cx, cy, scale, supported) {
-    const bh = BH * scale;
-    const bw = BW * scale;
-    const nw = NW * scale;
-    ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.roundRect(cx, cy - bh, bw + nw, bh * 2, bh * 0.45);
+  // ── Dessin bouchon ────────────────────────────────────────
+  function drawBouchon(cx, cy, type, alpha) {
+    ctx.save(); ctx.globalAlpha = alpha;
+    const c1 = type==='rouge'?'rgba(200,50,40,.95)':type==='blanc'?'rgba(180,130,20,.95)':'rgba(200,50,80,.95)';
+    const c2 = type==='rouge'?'rgba(120,20,15,.97)':type==='blanc'?'rgba(100,70,10,.97)':'rgba(120,20,50,.97)';
+    const c3 = type==='rouge'?'rgba(30,5,5,1)':type==='blanc'?'rgba(25,15,3,1)':'rgba(30,5,15,1)';
+    const capC = type==='rouge'?'#C82020':type==='blanc'?'#B09020':'#C82060';
+    const g=ctx.createRadialGradient(cx-RN*.2,cy-RN*.2,RN*.04,cx,cy,RN);
+    g.addColorStop(0,c1); g.addColorStop(.5,c2); g.addColorStop(1,c3);
+    ctx.beginPath(); ctx.arc(cx,cy,RN,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,RN*.95,0,Math.PI*2);
+    ctx.strokeStyle='rgba(220,80,60,.5)'; ctx.lineWidth=RN*.1; ctx.stroke();
+    const cap=ctx.createRadialGradient(cx-RN*.2,cy-RN*.2,RN*.04,cx,cy,RN*.65);
+    cap.addColorStop(0,capC); cap.addColorStop(.5,capC+'88'); cap.addColorStop(1,capC+'44');
+    ctx.beginPath(); ctx.arc(cx,cy,RN*.65,0,Math.PI*2); ctx.fillStyle=cap; ctx.fill();
+    [.82,.58].forEach((r,i)=>{
+      ctx.beginPath(); ctx.arc(cx,cy,RN*.65*r,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(210,170,50,${.75-i*.2})`; ctx.lineWidth=RN*.06; ctx.stroke();
+    });
+    const gl=ctx.createRadialGradient(cx,cy,0,cx,cy,RN*.2);
+    gl.addColorStop(0,'#E8D0A0'); gl.addColorStop(1,'#A07030');
+    ctx.beginPath(); ctx.arc(cx,cy,RN*.2,0,Math.PI*2); ctx.fillStyle=gl; ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Dessin emplacement vide ───────────────────────────────
+  function drawEmpty(cx, cy, isCulot, alpha, supported) {
+    const Rd = isCulot ? R : RN;
+    ctx.save(); ctx.globalAlpha = alpha * 0.6;
+    ctx.beginPath(); ctx.arc(cx, cy, Rd, 0, Math.PI*2);
     ctx.strokeStyle = canvasMoveMode && canvasMoveSource
-      ? (supported ? 'rgba(100,220,100,0.55)' : 'rgba(120,120,120,0.2)')
-      : 'rgba(201,168,76,0.13)';
-    ctx.lineWidth = canvasMoveMode && canvasMoveSource && supported ? 1.5 : 0.7;
-    ctx.setLineDash([4, 3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      ? (supported ? 'rgba(100,220,100,.55)' : 'rgba(120,120,120,.2)')
+      : 'rgba(201,168,76,.13)';
+    ctx.lineWidth = 0.7; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    if (isCulot) {
+      ctx.beginPath(); ctx.arc(cx,cy,Rd*.45,0,Math.PI*2);
+      ctx.strokeStyle='rgba(201,168,76,.15)'; ctx.lineWidth=Rd*.07; ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(cx,cy,Rd*.3,0,Math.PI*2);
+      ctx.fillStyle='rgba(201,168,76,.1)'; ctx.fill();
+    }
     ctx.restore();
   }
 
+  // ── Clayettes ─────────────────────────────────────────────
   cave.clayettes.forEach((cl) => {
     const depth = cl.rows || 1;
     const cols  = cl.cols;
-    const shelfW = cols * COL + (BH * 2);
-    const CX = (W - shelfW) / 2;
+    // Largeur totale = (cols-1) positions * step2 + diamètre du dernier cercle
+    // On prend le diamètre max (culot = 2R) pour les extrémités
+    const totalW = (cols - 1) * step2 + R * 2;
+    const x0 = (W - totalW) / 2 + R;
+    const sectionH = R + (depth - 1) * DY + R + 14;
+    const rowY0 = yBase + sectionH - R; // rang avant (bas)
 
-    const sectionH = BH + (depth - 1) * DY + BH + 14;
-
-    // Rangées arrière → avant
+    // Rangs arrière → avant
     for (let d = depth - 1; d >= 0; d--) {
-      const scale  = 1 - d * 0.15;
-      const bh     = BH * scale;
-      const alpha  = 1 - d * 0.28;
-      const rowY   = yBase + sectionH - BH - d * DY;
-      const xOff   = (d % 2 === 1) ? (COL / 2) : 0;
+      const rowY = rowY0 - d * DY;
+      const alpha = d === 0 ? 1 : Math.pow(AL, d);
 
       for (let c = 0; c < cols; c++) {
-        const slot = d * cols + c;
-        const bot  = bots.find(b => b.clayetteId === cl.id && b.slot === slot);
-        const cx   = CX + BH + c * COL + xOff;
-        const cy   = rowY;
-
-        // Alternance direction: rang pair → goulot à droite (bouchon→), rang impair → goulot à gauche (←bouchon)
-        const corkLeft = (c + d) % 2 === 1;
+        const slot    = d * cols + c;
+        const bot     = bots.find(b => b.clayetteId === cl.id && b.slot === slot);
+        const isCulot = bot
+          ? (bot.orientation === 'culot' || (bot.orientation !== 'bouchon' && (c + d) % 2 === 0))
+          : (c + d) % 2 === 0;
+        const cx = x0 + c * step2; // chaque position espacée de step2
 
         const isHL  = highlightedBottle &&
-          highlightedBottle.caveId     === caveId &&
+          highlightedBottle.caveId === caveId &&
           highlightedBottle.clayetteId === cl.id &&
-          highlightedBottle.slot       === slot;
-        const isSel = canvasMoveSource && canvasMoveSource.slot === slot && canvasMoveSource.cl.id === cl.id;
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
+          highlightedBottle.slot === slot;
+        const isSel = canvasMoveSource &&
+          canvasMoveSource.slot === slot &&
+          canvasMoveSource.cl.id === cl.id;
 
         if (bot) {
-          drawBottle(cx, cy, scale, bot.type, corkLeft, isHL, isSel);
-          hitZones.push({ cx: cx + (BW+NW)*scale/2, cy, r: bh * 1.2, bot, cave, cl, d, c, slot, isEmpty: false });
+          if (isCulot) drawCulot(cx, rowY, alpha);
+          else drawBouchon(cx, rowY, bot.type, alpha);
+
+          // Highlight
+          if (isHL || isSel) {
+            const Rd = isCulot ? R : RN;
+            ctx.save(); ctx.globalAlpha = alpha;
+            ctx.beginPath(); ctx.arc(cx, rowY, Rd*1.18, 0, Math.PI*2);
+            ctx.strokeStyle = isHL ? '#E8C87A' : '#FF6060';
+            ctx.lineWidth = 2.5;
+            if (isSel) ctx.setLineDash([4,3]);
+            ctx.shadowColor = isHL ? '#C9A84C' : '#FF4040';
+            ctx.shadowBlur = 10;
+            ctx.stroke(); ctx.shadowBlur = 0; ctx.setLineDash([]);
+            ctx.restore();
+          }
+          hitZones.push({ cx, cy: rowY, r: (isCulot?R:RN)*1.3, bot, cave, cl, d, c, slot, isEmpty: false });
         } else {
           const supported = isSupported(cl, d, c, caveId);
-          drawEmptySlot(cx, cy, scale, supported);
-          hitZones.push({ cx: cx + (BW+NW)*scale/2, cy, r: bh * 1.2, bot: null, cave, cl, d, c, slot, isEmpty: true, supported });
+          drawEmpty(cx, rowY, isCulot, alpha, supported);
+          hitZones.push({ cx, cy: rowY, r: (isCulot?R:RN)*1.3, bot: null, cave, cl, d, c, slot, isEmpty: true, supported });
         }
-
-        ctx.restore();
       }
     }
 
-    // Étiquette
-    ctx.fillStyle = 'rgba(212,180,131,0.5)';
+    // Étiquette à gauche, centrée verticalement sur la section
+    ctx.fillStyle = 'rgba(212,180,131,.5)';
     ctx.font = '9px DM Sans,sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(cl.name, CX, yBase + 10);
+    ctx.textAlign = 'right';
+    ctx.fillText(cl.name, x0 - R - 14, yBase + sectionH / 2 + 3);
 
     // Planche bois
     const ySep = yBase + sectionH + 3;
-    const shelfGrad = ctx.createLinearGradient(CX, ySep, CX, ySep + 7);
-    shelfGrad.addColorStop(0, '#C8A040');
-    shelfGrad.addColorStop(0.4, '#A07820');
-    shelfGrad.addColorStop(1, '#5A3A10');
+    const sg = ctx.createLinearGradient(0, ySep, 0, ySep+10);
+    sg.addColorStop(0,'#E0C898'); sg.addColorStop(.4,'#B09040'); sg.addColorStop(1,'#7A5520');
     ctx.beginPath();
-    ctx.roundRect(CX, ySep, shelfW, 7, 2);
-    ctx.fillStyle = shelfGrad;
-    ctx.fill();
+    ctx.roundRect(x0 - R - 10, ySep, totalW + 20, 10, 3);
+    ctx.fillStyle = sg; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.1)'; ctx.lineWidth = .5; ctx.stroke();
 
-    yBase += sectionH + 7 + 10;
+    yBase += sectionH + 10 + 12;
   });
 
   cv._hitZones = hitZones;
   cv._caveId   = caveId;
 
   const stats = document.getElementById('planStats');
-  if (stats) stats.textContent = `${bots.length} bouteilles`;
-  document.getElementById('totalBadge').textContent = `${bottles.length} bouteille${bottles.length > 1 ? 's' : ''}`;
+  if (stats) stats.textContent = `${bots.length} bouteille${bots.length>1?'s':''}`;
+  document.getElementById('totalBadge').textContent = `${bottles.length} bouteille${bottles.length>1?'s':''}`;
 }
 
 function render3D(caveId) {
@@ -2161,14 +2159,13 @@ function render3D(caveId) {
   if (!cave) return;
   const cv = document.getElementById('caveCanvas');
   if (!cv) return;
-  const BH = 22, DY = BH * 1.05;
-
-  let totalH = 14;
-  cave.clayettes.forEach(cl => {
-    const depth = cl.rows || 1;
-    totalH += BH + (depth - 1) * DY + BH + 14 + 7 + 10;
+  const R2=17, DY2=27;
+  let totalH=14;
+  cave.clayettes.forEach(cl=>{
+    const depth=cl.rows||1;
+    totalH += R2+(depth-1)*DY2+R2+14+10+12;
   });
-  cv.height = Math.max(200, totalH + 20);
+  cv.height=Math.max(200,totalH+20);
 
   drawCave(caveId);
 
