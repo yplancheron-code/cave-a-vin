@@ -1309,16 +1309,37 @@ let caves = [
 ];
 
 // Simulated bottles: {caveId, clayetteId, slot, type, name, year}
-let bottles = [
+// ── Données persistées en localStorage ──────────────────────
+const DEMO_BOTTLES = [
   {caveId:1,clayetteId:1,slot:0,type:'rouge',name:'Château Margaux 2018',year:2018,region:'Bordeaux',price:350,apogeeStart:2028,apogeeEnd:2038},
   {caveId:1,clayetteId:1,slot:1,type:'rouge',name:'Pomerol 2019',year:2019,region:'Bordeaux',price:85,apogeeStart:2025,apogeeEnd:2032},
-  {caveId:1,clayetteId:1,slot:7,type:'rouge',name:'Gevrey-Chambertin 2016',year:2016,region:'Bourgogne',price:65,apogeeStart:2023,apogeeEnd:2028},
-  {caveId:1,clayetteId:1,slot:9,type:'rouge',name:'Saint-Émilion 2018',year:2018,region:'Bordeaux',price:45,apogeeStart:2026,apogeeEnd:2034},
   {caveId:1,clayetteId:2,slot:2,type:'blanc',name:'Chablis 1er Cru 2019',year:2019,region:'Bourgogne',price:28,apogeeStart:2022,apogeeEnd:2027},
-  {caveId:1,clayetteId:2,slot:4,type:'blanc',name:'Pouilly-Fumé 2022',year:2022,region:'Loire',price:22,apogeeStart:2024,apogeeEnd:2028},
   {caveId:2,clayetteId:1,slot:1,type:'rose',name:'Bandol Rosé 2023',year:2023,region:'Provence',price:18,apogeeStart:2024,apogeeEnd:2026},
-  {caveId:2,clayetteId:1,slot:3,type:'rose',name:'Côtes de Provence 2024',year:2024,region:'Provence',price:12,apogeeStart:2025,apogeeEnd:2026},
 ];
+
+function loadData() {
+  try {
+    const savedBottles = localStorage.getItem('cave_bottles');
+    const savedCaves   = localStorage.getItem('cave_caves');
+    if (savedBottles) bottles = JSON.parse(savedBottles);
+    else bottles = JSON.parse(JSON.stringify(DEMO_BOTTLES));
+    if (savedCaves) caves = JSON.parse(savedCaves);
+  } catch(e) {
+    console.warn('Erreur chargement données:', e);
+    bottles = JSON.parse(JSON.stringify(DEMO_BOTTLES));
+  }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem('cave_bottles', JSON.stringify(bottles));
+    localStorage.setItem('cave_caves',   JSON.stringify(caves));
+  } catch(e) {
+    console.warn('Erreur sauvegarde:', e);
+  }
+}
+
+let bottles = [];
 
 // State
 let selectedType = 'rouge';
@@ -1779,6 +1800,7 @@ function confirmPlacement() {
   wineQty = 1;
   document.getElementById('qtyVal').textContent = '1';
 
+  saveData();
   switchTab('plan');
 }
 
@@ -1906,6 +1928,7 @@ function flipBottleOrientation() {
   // Basculer vers l'opposé
   b.orientation = currentIsCulot ? 'bouchon' : 'culot';
   const label = currentIsCulot ? 'Bouchon visible' : 'Culot visible';
+  saveData();
   showToast(`🔄 ${label}`);
   closeBottomSheet();
   renderPlanTab();
@@ -1917,6 +1940,7 @@ function removeBottle() {
   const name = activeBottle.name;
   bottles = bottles.filter(b => b !== activeBottle);
   if (activeBackBottle) activeBackBottle.depth = 'front';
+  saveData();
   closeBottomSheet();
   showToast(`🗑️ "${name}" retirée`);
   renderPlanTab();
@@ -1925,6 +1949,7 @@ function removeBottle() {
 function removeBothBottles() {
   if (!activeBottle) return;
   bottles = bottles.filter(b => b !== activeBottle && b !== activeBackBottle);
+  saveData();
   closeBottomSheet();
   showToast('🗑️ 2 bouteilles retirées');
   renderPlanTab();
@@ -2253,6 +2278,7 @@ function handleCanvasClick(cv, cx, cy) {
         b.caveId     = best.cave.id;
         b.clayetteId = best.cl.id;
         b.slot       = best.slot;
+        saveData();
         canvasMoveSource = null;
         drawCave(cv._caveId);
         showToast("✅ Bouteille déplacée !");
@@ -2774,6 +2800,7 @@ function renderStats() {
 // CONFIG
 // ============================================================
 function saveApiKey() {
+  saveData(); // sauvegarde aussi les caves
   const val = document.getElementById('apiKeyInput').value.trim();
   if (!val.startsWith('sk-ant-')) {
     document.getElementById('apiKeyStatus').textContent = '⚠️ La clé doit commencer par sk-ant-';
@@ -2969,6 +2996,7 @@ function showToast(msg) {
 // ============================================================
 // INIT
 // ============================================================
+loadData();
 document.getElementById('totalBadge').textContent = `${bottles.length} bouteilles`;
 renderPlanTab();
 </script>
